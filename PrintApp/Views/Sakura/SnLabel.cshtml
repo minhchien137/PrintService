@@ -1,0 +1,516 @@
+@{
+    ViewData["Title"] = "SN Label Print — Sakura";
+}
+
+<style>
+    /* ── Reuse root vars — same tokens as Toast/FQC pages ─────────────────── */
+    :root {
+        --ink:   #1a1a2e;
+        --paper: #f5f0e8;
+        --cream: #ede8dc;
+        --rule:  #c8c0b0;
+        --stamp: #c0392b;
+        --ok:    #2c7a5a;
+        --ghost: #8a8070;
+        --mono:  'Azeret Mono', monospace;
+        --body:  'DM Sans', sans-serif;
+
+        /* SN Label variant colors — Green reuses the app's existing --ok (pass) green */
+        --sn-blue: #2f5ea8;
+        --sn-pink: #c15b83;
+        --sn-green: var(--ok);
+    }
+
+    .snl-page { max-width: 1040px; margin: 0 auto; position: relative; z-index: 1; }
+
+    .snl-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        border-bottom: 2px solid var(--ink);
+        padding-bottom: 18px;
+        margin-bottom: 32px;
+    }
+    .snl-header h1 { font-family: var(--mono); font-size: 26px; font-weight: 700; letter-spacing: -1px; }
+    .snl-header p {
+        font-family: var(--mono); font-size: 11px; letter-spacing: 3px;
+        text-transform: uppercase; color: var(--ghost); margin-top: 5px;
+    }
+    .snl-badge {
+        background: #1a6644; color: #fff;
+        font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: 2px;
+        padding: 6px 12px; border-radius: 3px; transform: rotate(-2deg);
+        box-shadow: 2px 3px 0 rgba(0,0,0,0.15);
+    }
+
+    .snl-layout { display: flex; gap: 28px; align-items: flex-start; }
+    .snl-left { flex: 1.3; min-width: 0; }
+    .snl-right { flex: 1; min-width: 0; position: sticky; top: 24px; }
+
+    /* ── Reused section/grid/field/button primitives (same as Toast/FQC) ──── */
+    .t-section {
+        background: var(--paper); border: 1px solid var(--rule); border-radius: 4px;
+        padding: 24px 26px 20px; margin-bottom: 18px; box-shadow: 3px 4px 0 rgba(0,0,0,0.06);
+    }
+    .t-section-label {
+        font-family: var(--mono); font-size: 10px; letter-spacing: 3px; text-transform: uppercase;
+        color: var(--ghost); margin-bottom: 16px; display: flex; align-items: center; gap: 10px;
+    }
+    .t-section-label::after { content: ''; flex: 1; height: 1px; background: var(--rule); }
+    .t-section-label .bi { color: var(--rule); font-weight: 400; letter-spacing: 1px; text-transform: none; }
+
+    .t-grid { display: grid; gap: 16px 20px; }
+    .t-grid-2 { grid-template-columns: 1fr 1fr; }
+    .t-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+
+    .t-field label {
+        display: block; font-family: var(--mono); font-size: 10px; letter-spacing: 1.5px;
+        text-transform: uppercase; color: var(--ghost); margin-bottom: 6px;
+    }
+    .t-field label .bi { color: var(--rule); text-transform: none; letter-spacing: 0.5px; }
+    .t-field input, .t-field select {
+        width: 100%; background: transparent; border: none; border-bottom: 1.5px solid var(--rule);
+        padding: 7px 0; font-family: var(--mono); font-size: 14px; color: var(--ink);
+        outline: none; transition: border-color 0.2s;
+    }
+    .t-field input:focus, .t-field select:focus { border-bottom-color: var(--ink); }
+    .t-field select {
+        appearance: none; cursor: pointer;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238a8070' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+        background-repeat: no-repeat; background-position: right 4px center; padding-right: 24px;
+    }
+
+    .t-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 4px; }
+    .t-btn {
+        font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+        text-transform: uppercase; border: none; cursor: pointer; padding: 11px 18px; border-radius: 3px;
+        transition: all 0.15s; display: flex; align-items: center; gap: 7px;
+    }
+    .t-btn-primary { background: var(--ink); color: var(--paper); box-shadow: 3px 3px 0 rgba(0,0,0,0.18); }
+    .t-btn-primary:hover:not(:disabled) { transform: translate(-1px,-1px); box-shadow: 4px 4px 0 rgba(0,0,0,0.18); }
+    .t-btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+    .t-btn-outline { background: transparent; color: var(--ink); border: 1.5px solid var(--ink); box-shadow: 2px 2px 0 rgba(0,0,0,0.1); }
+    .t-btn-outline:hover { background: var(--ink); color: var(--paper); }
+    .t-btn-ghost { background: transparent; color: var(--ghost); border: 1.5px solid var(--rule); }
+    .t-btn-ghost:hover { border-color: var(--ink); color: var(--ink); }
+
+    .t-status {
+        font-family: var(--mono); font-size: 12px; padding: 12px 16px; border-radius: 3px;
+        display: none; align-items: flex-start; gap: 10px; margin-top: 14px; line-height: 1.5;
+    }
+    .t-status.show { display: flex; }
+    .t-status.ok  { background: #e8f5ee; border-left: 3px solid var(--ok);    color: #1a4a30; }
+    .t-status.err { background: #fdf0ee; border-left: 3px solid var(--stamp); color: #6a1a10; }
+
+    .t-table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 12px; }
+    .t-table th {
+        text-align: left; padding: 8px 10px; border-bottom: 2px solid var(--ink);
+        letter-spacing: 1.5px; text-transform: uppercase; font-size: 10px; color: var(--ghost);
+    }
+    .t-table td { padding: 8px 10px; border-bottom: 1px solid var(--cream); vertical-align: middle; }
+    .t-table tr:hover td { background: var(--cream); }
+
+    /* ── New: minimal additions specific to SN Label ──────────────────────── */
+
+    /* Color select + swatch dot */
+    .swatch-row { display: flex; align-items: center; gap: 8px; }
+    .swatch-row select { flex: 1; }
+    .swatch-dot {
+        width: 13px; height: 13px; border-radius: 50%; flex-shrink: 0;
+        border: 1.5px solid rgba(0,0,0,0.25);
+    }
+    .swatch-dot.blue  { background: var(--sn-blue); }
+    .swatch-dot.pink  { background: var(--sn-pink); }
+    .swatch-dot.green { background: var(--sn-green); }
+
+    /* Status panel readout rows */
+    .snl-readout { display: flex; flex-direction: column; gap: 12px; margin-bottom: 4px; }
+    .snl-readout-row {
+        display: flex; justify-content: space-between; align-items: baseline;
+        border-bottom: 1px dashed var(--rule); padding-bottom: 10px;
+    }
+    .snl-readout-row .k {
+        font-family: var(--mono); font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--ghost);
+    }
+    .snl-readout-row .v { font-family: var(--mono); font-size: 15px; color: var(--ink); font-weight: 600; }
+    .snl-readout-row .v.big { font-size: 19px; letter-spacing: 1px; }
+    .snl-readout-row .v.muted { color: var(--ghost); font-weight: 400; font-size: 12px; }
+
+    /* Per-color summary cards */
+    .snl-summary-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    .snl-summary-card {
+        border: 1px solid var(--rule); border-radius: 4px; padding: 10px 12px;
+        background: var(--cream); display: flex; flex-direction: column; gap: 6px;
+    }
+    .snl-summary-card.active { border-color: var(--ink); background: var(--paper); }
+    .snl-summary-card .name { display: flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 11px; font-weight: 700; }
+    .snl-summary-card .count { font-family: var(--mono); font-size: 20px; font-weight: 700; }
+    .snl-summary-card .last { font-family: var(--mono); font-size: 10px; color: var(--ghost); word-break: break-all; }
+
+    /* Generated serial output */
+    .snl-serial-list {
+        background: var(--ink); color: #7ecfa0; font-family: var(--mono); font-size: 12.5px;
+        line-height: 1.9; padding: 16px 18px; border-radius: 3px; max-height: 260px; overflow-y: auto;
+    }
+    .snl-serial-list div { display: flex; justify-content: space-between; gap: 12px; }
+    .snl-serial-list .idx { color: #5a8f78; }
+
+    /* History collapsible */
+    .snl-history-toggle {
+        display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none;
+    }
+    .snl-history-body { display: none; margin-top: 14px; }
+    .snl-history-body.open { display: block; }
+
+    @@media (max-width: 860px) {
+        .snl-layout { flex-direction: column; }
+        .snl-right { position: static; width: 100%; }
+        .t-grid-2, .t-grid-3, .snl-summary-grid { grid-template-columns: 1fr; }
+    }
+</style>
+
+<div class="snl-page">
+
+    <header class="snl-header">
+        <div>
+            <h1>SN LABEL PRINT</h1>
+            <p>序列号打印 · Serial Number Print — Sakura</p>
+        </div>
+        <div class="snl-badge">SAKURA</div>
+    </header>
+
+    <div class="snl-layout">
+
+        <!-- ── Left: form + serial output + history ── -->
+        <div class="snl-left">
+
+            <div class="t-section">
+                <div class="t-section-label">打印参数 <span class="bi">/ Print Parameters</span></div>
+
+                <div class="t-grid t-grid-2">
+                    <div class="t-field">
+                        <label>生产日期 <span class="bi">/ Production Date</span></label>
+                        <input type="date" id="prodDate" />
+                    </div>
+                    <div class="t-field">
+                        <label>产线 <span class="bi">/ Line</span></label>
+                        <select id="line">
+                            <option value="0">0 — Golden line</option>
+                            <option value="1">1 — Golden line</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="t-grid t-grid-2" style="margin-top:16px">
+                    <div class="t-field">
+                        <label>颜色 <span class="bi">/ Color</span></label>
+                        <div class="swatch-row">
+                            <span id="colorDot" class="swatch-dot blue"></span>
+                            <select id="variant">
+                                <option value="00">Blue (00)</option>
+                                <option value="01">Pink (01)</option>
+                                <option value="02">Green (02)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="t-field">
+                        <label>数量 <span class="bi">/ Quantity</span></label>
+                        <input type="number" id="quantity" value="1" min="1" max="500" />
+                    </div>
+                </div>
+
+                <div class="t-actions" style="margin-top:20px">
+                    <button class="t-btn t-btn-primary" id="btnPrint">打印 / PRINT</button>
+                    <button class="t-btn t-btn-ghost" id="btnRefresh">↻ 刷新 / Refresh</button>
+                </div>
+
+                <div id="printStatus" class="t-status"></div>
+            </div>
+
+            <div class="t-section" id="serialOutputSection" style="display:none">
+                <div class="t-section-label">生成的序列号 <span class="bi">/ Generated Serials</span></div>
+                <div id="serialList" class="snl-serial-list"></div>
+                <div class="t-actions" style="margin-top:14px">
+                    <button class="t-btn t-btn-outline" id="btnDownloadZpl">⬇ 下载 ZPL / Download .zpl</button>
+                </div>
+            </div>
+
+            <div class="t-section">
+                <div class="snl-history-toggle" id="historyToggle">
+                    <div class="t-section-label" style="margin-bottom:0;flex:1">
+                        历史记录 <span class="bi">/ History (selected date)</span>
+                    </div>
+                    <span id="historyCaret" style="font-family:var(--mono);color:var(--ghost)">▾</span>
+                </div>
+                <div id="historyBody" class="snl-history-body">
+                    <table class="t-table">
+                        <thead>
+                            <tr>
+                                <th>Serial</th>
+                                <th>Color</th>
+                                <th>Line</th>
+                                <th>Printed At</th>
+                                <th>By</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyRows">
+                            <tr><td colspan="5" style="text-align:center;color:var(--ghost);padding:16px">—</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <a href="@Url.Content("~/")" style="font-family:var(--mono);font-size:11px;color:var(--ghost);
+                letter-spacing:1px;text-decoration:none;border-bottom:1px solid var(--rule);">
+                ← Về trang chủ
+            </a>
+
+        </div>
+
+        <!-- ── Right: status panel ── -->
+        <div class="snl-right">
+            <div class="t-section">
+                <div class="t-section-label">当前状态 <span class="bi">/ Selection Status</span></div>
+
+                <div class="snl-readout">
+                    <div class="snl-readout-row">
+                        <span class="k">Last Printed</span>
+                        <span class="v" id="stLast">—</span>
+                    </div>
+                    <div class="snl-readout-row">
+                        <span class="k">Next Serial</span>
+                        <span class="v big" id="stNext">—</span>
+                    </div>
+                    <div class="snl-readout-row">
+                        <span class="k">Printed Today</span>
+                        <span class="v" id="stCount">0</span>
+                    </div>
+                    <div class="snl-readout-row" style="border-bottom:none;padding-bottom:0">
+                        <span class="k">Capacity Left</span>
+                        <span class="v muted" id="stRemaining">—</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="t-section">
+                <div class="t-section-label">全颜色总览 <span class="bi">/ Color Summary</span></div>
+                <div class="snl-summary-grid" id="summaryGrid"></div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+@section Scripts {
+<script>
+(function () {
+    const BASE = '@Url.Content("~")'.replace(/\/$/, '');
+
+    const COLOR_META = {
+        '00': { name: 'Blue',  cls: 'blue'  },
+        '01': { name: 'Pink',  cls: 'pink'  },
+        '02': { name: 'Green', cls: 'green' }
+    };
+
+    // Both line identifiers (0, 1) belong to the same physical line: "Golden line".
+    // The digit is only the character stored in the serial / DB — display always shows the full name.
+    function lineLabel(line) {
+        return `${line} — Golden line`;
+    }
+
+    const $prodDate   = document.getElementById('prodDate');
+    const $line       = document.getElementById('line');
+    const $variant    = document.getElementById('variant');
+    const $quantity   = document.getElementById('quantity');
+    const $colorDot   = document.getElementById('colorDot');
+    const $btnPrint   = document.getElementById('btnPrint');
+    const $btnRefresh = document.getElementById('btnRefresh');
+    const $printStatus= document.getElementById('printStatus');
+    const $serialSection = document.getElementById('serialOutputSection');
+    const $serialList = document.getElementById('serialList');
+    const $btnDownload = document.getElementById('btnDownloadZpl');
+
+    const $stLast = document.getElementById('stLast');
+    const $stNext = document.getElementById('stNext');
+    const $stCount = document.getElementById('stCount');
+    const $stRemaining = document.getElementById('stRemaining');
+    const $summaryGrid = document.getElementById('summaryGrid');
+
+    const $historyToggle = document.getElementById('historyToggle');
+    const $historyBody = document.getElementById('historyBody');
+    const $historyCaret = document.getElementById('historyCaret');
+    const $historyRows = document.getElementById('historyRows');
+
+    let lastZpl = '';
+    let lastBatchId = '';
+
+    function todayStr() {
+        const d = new Date();
+        const pad = n => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    }
+
+    function showStatus(el, msg, type) {
+        el.textContent = msg;
+        el.className = `t-status show ${type}`;
+    }
+
+    function updateColorDot() {
+        const meta = COLOR_META[$variant.value];
+        $colorDot.className = 'swatch-dot ' + (meta ? meta.cls : '');
+    }
+
+    async function loadStatus() {
+        const params = new URLSearchParams({
+            date: $prodDate.value,
+            variant: $variant.value,
+            line: $line.value
+        });
+        try {
+            const res = await fetch(`${BASE}/api/sakura/snlabel/status?${params}`);
+            const body = await res.json();
+            if (!res.ok || !body.ok) throw new Error(body.error || 'Không tải được trạng thái.');
+            renderStatus(body.data);
+        } catch (e) {
+            $stLast.textContent = '—';
+            $stNext.textContent = '—';
+            $stCount.textContent = '0';
+            $stRemaining.textContent = '—';
+            $summaryGrid.innerHTML = `<div style="grid-column:1/-1;font-family:var(--mono);font-size:11px;color:var(--stamp)">✗ ${e.message}</div>`;
+        }
+    }
+
+    function renderStatus(data) {
+        $stLast.textContent = data.lastSerial || 'None yet';
+        $stNext.textContent = data.nextSerial || '—';
+        $stCount.textContent = data.count;
+        $stRemaining.textContent = data.remainingCapacity.toLocaleString();
+
+        $summaryGrid.innerHTML = data.colorSummary.map(s => {
+            const meta = COLOR_META[s.variant] || { name: s.color, cls: '' };
+            const active = s.variant === $variant.value ? ' active' : '';
+            return `
+                <div class="snl-summary-card${active}">
+                    <div class="name"><span class="swatch-dot ${meta.cls}"></span>${meta.name}</div>
+                    <div class="count">${s.count}</div>
+                    <div class="last">${s.lastSerial || 'none yet'}</div>
+                </div>`;
+        }).join('');
+    }
+
+    async function loadHistory() {
+        const params = new URLSearchParams({ date: $prodDate.value });
+        try {
+            const res = await fetch(`${BASE}/api/sakura/snlabel/history?${params}`);
+            const body = await res.json();
+            if (!res.ok || !body.ok) throw new Error(body.error || 'Không tải được lịch sử.');
+            renderHistory(body.data);
+        } catch (e) {
+            $historyRows.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--stamp);padding:16px">✗ ${e.message}</td></tr>`;
+        }
+    }
+
+    function renderHistory(rows) {
+        if (!rows.length) {
+            $historyRows.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--ghost);padding:16px">Chưa có dữ liệu.</td></tr>`;
+            return;
+        }
+        $historyRows.innerHTML = rows.map(r => {
+            const meta = COLOR_META[r.variant] || { name: r.color, cls: '' };
+            const printedAt = new Date(r.printedAt).toLocaleString();
+            return `
+                <tr>
+                    <td>${r.serialNumber}</td>
+                    <td><span class="swatch-dot ${meta.cls}" style="display:inline-block;vertical-align:middle;margin-right:6px"></span>${meta.name}</td>
+                    <td>${lineLabel(r.productionLine)}</td>
+                    <td>${printedAt}</td>
+                    <td>${r.printedBy || '—'}</td>
+                </tr>`;
+        }).join('');
+    }
+
+    function downloadZplFile(zpl, filename) {
+        const blob = new Blob([zpl], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+    }
+
+    async function doPrint() {
+        const qty = parseInt($quantity.value) || 0;
+        if (qty < 1 || qty > 500) {
+            showStatus($printStatus, '✗ Số lượng phải từ 1 đến 500.', 'err');
+            return;
+        }
+
+        $btnPrint.disabled = true;
+        try {
+            const res = await fetch(`${BASE}/api/sakura/snlabel/print`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    date: $prodDate.value,
+                    variant: $variant.value,
+                    line: $line.value,
+                    quantity: qty
+                })
+            });
+            const body = await res.json();
+            if (!res.ok || body.ok === false) throw new Error(body.error || 'In thất bại.');
+
+            lastZpl = body.zpl;
+            lastBatchId = body.batchId;
+
+            $serialSection.style.display = 'block';
+            $serialList.innerHTML = body.serials.map((s, i) =>
+                `<div><span class="idx">${String(i + 1).padStart(3, '0')}</span><span>${s.serialNumber}</span></div>`
+            ).join('');
+
+            let msg = `✓ Đã in ${body.serials.length} serial (mode: ${body.printMode}).`;
+            if (body.printMode === 'DirectTcp') {
+                msg += body.directPrintSent
+                    ? ' Đã gửi trực tiếp tới máy in.'
+                    : ` Gửi trực tiếp thất bại: ${body.directPrintError || 'lỗi không rõ'}.`;
+            } else {
+                downloadZplFile(lastZpl, `sn-labels-${lastBatchId}.zpl`);
+            }
+            showStatus($printStatus, msg, body.printMode === 'DirectTcp' && body.directPrintSent === false ? 'err' : 'ok');
+
+            await loadStatus();
+            if ($historyBody.classList.contains('open')) await loadHistory();
+        } catch (e) {
+            showStatus($printStatus, `✗ ${e.message}`, 'err');
+        } finally {
+            $btnPrint.disabled = false;
+        }
+    }
+
+    $btnDownload.addEventListener('click', () => {
+        if (!lastZpl) return;
+        downloadZplFile(lastZpl, `sn-labels-${lastBatchId}.zpl`);
+    });
+
+    $variant.addEventListener('change', () => { updateColorDot(); loadStatus(); });
+    $line.addEventListener('change', loadStatus);
+    $prodDate.addEventListener('change', () => { loadStatus(); if ($historyBody.classList.contains('open')) loadHistory(); });
+    $btnRefresh.addEventListener('click', () => { loadStatus(); if ($historyBody.classList.contains('open')) loadHistory(); });
+    $btnPrint.addEventListener('click', doPrint);
+
+    $historyToggle.addEventListener('click', () => {
+        const open = $historyBody.classList.toggle('open');
+        $historyCaret.textContent = open ? '▴' : '▾';
+        if (open) loadHistory();
+    });
+
+    // ── init ──────────────────────────────────────────────────────────────────
+    $prodDate.value = todayStr();
+    updateColorDot();
+    loadStatus();
+})();
+</script>
+}

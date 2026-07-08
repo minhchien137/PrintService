@@ -2660,19 +2660,19 @@
     ]
   },
   "packageFolders": {
-    "/Users/pm/.nuget/packages/": {}
+    "C:\\Users\\Minh Chien\\.nuget\\packages\\": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/Users/pm/Coldzy/InternetPrint/InternetPrint/PrintApp/PrintApp.csproj",
+      "projectUniqueName": "D:\\PrintService\\PrintApp\\PrintApp.csproj",
       "projectName": "PrintApp",
-      "projectPath": "/Users/pm/Coldzy/InternetPrint/InternetPrint/PrintApp/PrintApp.csproj",
-      "packagesPath": "/Users/pm/.nuget/packages/",
-      "outputPath": "/Users/pm/Coldzy/InternetPrint/InternetPrint/PrintApp/obj/",
+      "projectPath": "D:\\PrintService\\PrintApp\\PrintApp.csproj",
+      "packagesPath": "C:\\Users\\Minh Chien\\.nuget\\packages\\",
+      "outputPath": "D:\\PrintService\\PrintApp\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
-        "/Users/pm/.nuget/NuGet/NuGet.Config"
+        "C:\\Users\\Minh Chien\\AppData\\Roaming\\NuGet\\NuGet.Config"
       ],
       "originalTargetFrameworks": [
         "net8.0"
@@ -2720,6 +2720,24 @@
         ],
         "assetTargetFallback": true,
         "warn": true,
+        "downloadDependencies": [
+          {
+            "name": "Microsoft.AspNetCore.App.Ref",
+            "version": "[8.0.27, 8.0.27]"
+          },
+          {
+            "name": "Microsoft.NETCore.App.Host.win-x64",
+            "version": "[8.0.27, 8.0.27]"
+          },
+          {
+            "name": "Microsoft.NETCore.App.Ref",
+            "version": "[8.0.27, 8.0.27]"
+          },
+          {
+            "name": "Microsoft.WindowsDesktop.App.Ref",
+            "version": "[8.0.27, 8.0.27]"
+          }
+        ],
         "frameworkReferences": {
           "Microsoft.AspNetCore.App": {
             "privateAssets": "none"
@@ -2728,7 +2746,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/10.0.301/PortableRuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.300/PortableRuntimeIdentifierGraph.json"
       }
     }
   }

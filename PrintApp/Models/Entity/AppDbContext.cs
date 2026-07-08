@@ -10,10 +10,24 @@ public class AppDbContext : DbContext
     public DbSet<AstroLabelData> AstroLabelDatas { get; set; }
     public DbSet<PrinterInfo> PrinterInfos { get; set; }
     public DbSet<SVNToastSerialInfo> SVNToastSerialInfos { get; set; }
+    public DbSet<SnLabelPrint> SnLabelPrints { get; set; }
+    public DbSet<SakuraZplTemplate> SakuraZplTemplates { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<SVNToastSerialInfo>()
             .HasKey(x => x.SerialNumber);
+
+        modelBuilder.Entity<SnLabelPrint>(e =>
+        {
+            e.HasIndex(x => x.SerialNumber).IsUnique();
+            e.HasIndex(x => new { x.ProductionDate, x.ProductionLine, x.Variant, x.RunningNumberInt })
+                .HasDatabaseName("IX_SM_SNLabelPrint_Counter");
+        });
+
+        modelBuilder.Entity<SakuraZplTemplate>(e =>
+        {
+            e.HasIndex(x => x.TemplateKey).IsUnique();
+        });
     }
 }

@@ -15,6 +15,9 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddScoped<ToastService>();
 builder.Services.AddScoped<ToastSerialService>();
 
+// ── Sakura services ────────────────────────────────────────────────────────────
+builder.Services.AddScoped<SakuraService>();
+
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())
