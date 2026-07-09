@@ -18,6 +18,7 @@ builder.Services.AddScoped<ToastSerialService>();
 
 // ── Sakura services ────────────────────────────────────────────────────────────
 builder.Services.AddScoped<SakuraService>();
+builder.Services.AddScoped<ViidooService>();
 
 var app = builder.Build();
 

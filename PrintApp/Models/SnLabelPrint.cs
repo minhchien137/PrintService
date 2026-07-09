@@ -66,7 +66,14 @@ public class WorkOrderLookupResponse
     public string WorkOrder { get; set; } = "";
     public string Variant { get; set; } = "";
     public string Color { get; set; } = "";
-    public int Quantity { get; set; }
+    public int TotalQuantity { get; set; }
+    public int PrintedQuantity { get; set; }
+    public int RemainingQuantity { get; set; }
+
+    // Ngày sản xuất của lần in ĐẦU TIÊN cho Work Order này (null nếu đây là lần in đầu tiên).
+    // Toàn bộ nhãn của cùng 1 WO phải dùng chung 1 ngày này — server sẽ tự khóa theo
+    // giá trị này khi in tiếp, bất kể ngày hiện tại trên form là gì.
+    public DateTime? LockedProductionDate { get; set; }
 }
 
 public class ManualUnlockRequest

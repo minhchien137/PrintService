@@ -46,6 +46,8 @@
             'snlabel.lookupBtn': '🔍 Lookup',
             'snlabel.woEnterFirst': 'Enter a Work Order first.',
             'snlabel.woLookingUp': 'Looking up…',
+            'snlabel.woRemaining': 'Remaining / Total',
+            'snlabel.woPrinted': 'Already Printed',
             'snlabel.manualPwTitle': 'Enter the password to switch to Manual mode.',
             'snlabel.manualPwPlaceholder': 'Password',
             'snlabel.manualPwWrong': 'Incorrect password.',
@@ -91,6 +93,11 @@
             'history.subtitle': 'Serial Number Print — Sakura',
             'history.filter': 'Filter',
             'history.prodDate': 'Production Date',
+            'history.filterSerial': 'Serial Number',
+            'history.filterSerialPlaceholder': 'Search Serial Number…',
+            'history.filterWorkOrder': 'Work Order',
+            'history.filterWorkOrderAll': '— All —',
+            'history.pageSize': 'Records / Page',
             'history.refresh': '↻ Refresh',
             'history.printedSerials': 'Printed Serials',
             'history.colSerial': 'Serial',
@@ -102,10 +109,33 @@
             'history.backSnLabel': '← Back to SN Label Print',
             'history.loading': 'Loading…',
             'history.noData': 'No data yet.',
+            'history.firstPage': 'First page',
             'history.prevPage': '← Prev',
             'history.nextPage': 'Next →',
+            'history.lastPage': 'Last page',
             'history.page': 'Page',
-            'history.records': 'records'
+            'history.records': 'records',
+
+            // ── Server-side error messages (returned as errorCode + errorParams) ──
+            'error.common.invalidVariant': "Invalid variant: '{variant}'.",
+            'error.common.missingData': 'Missing data.',
+            'error.common.unexpectedError': 'An error occurred: {message}',
+            'error.workOrder.missing': 'Work Order is required.',
+            'error.workOrder.notFoundOdoo': "Work Order '{wo}' not found on Odoo.",
+            'error.workOrder.colorUnknown': "Could not determine the color for Work Order '{wo}'.",
+            'error.workOrder.invalidQuantity': "Work Order '{wo}' does not have a valid quantity.",
+            'error.workOrder.unresolvedColor': "Could not recognize the color '{color}' returned from Odoo.",
+            'error.workOrder.exhausted': "Work Order '{wo}' has already printed its full quantity ({printed}/{total}).",
+            'error.workOrder.totalUnavailable': "Could not determine the total quantity of Work Order '{wo}'.",
+            'error.password.incorrect': 'Incorrect password.',
+            'error.reprint.missingSerial': 'Serial Number is required.',
+            'error.reprint.notFound': "Serial '{serial}' not found.",
+            'error.print.invalidQuantity': 'Quantity must be between 1 and {max}.',
+            'error.print.invalidLine': 'Invalid line (must be 0 or 1).',
+            'error.print.workOrderQuantityExceeded': "Work Order '{wo}' only has {remaining} left out of {total} (already printed {printed}).",
+            'error.print.serialCapacityExceeded': 'Cannot generate more serials: running number would exceed ZZZ ({max}). Only {remaining} serial(s) left for {color} / Line {line} / {date}.',
+            'error.print.concurrencyFailed': 'Could not generate serials due to repeated conflicts — please try again.',
+            'error.odoo.cookieNotConfigured': 'Odoo cookie is not configured. Please update the SVN_Defect_Cookie table.'
         }},
         zh: { translation: {
             'color.blue': '蓝色',
@@ -136,6 +166,8 @@
             'snlabel.lookupBtn': '🔍 查询',
             'snlabel.woEnterFirst': '请先输入工单号。',
             'snlabel.woLookingUp': '查询中…',
+            'snlabel.woRemaining': '剩余 / 总数',
+            'snlabel.woPrinted': '已打印',
             'snlabel.manualPwTitle': '请输入密码以切换到手动打印模式。',
             'snlabel.manualPwPlaceholder': '密码',
             'snlabel.manualPwWrong': '密码错误。',
@@ -181,6 +213,11 @@
             'history.subtitle': '序列号打印 — Sakura',
             'history.filter': '筛选',
             'history.prodDate': '生产日期',
+            'history.filterSerial': '序列号',
+            'history.filterSerialPlaceholder': '搜索序列号…',
+            'history.filterWorkOrder': '工单号',
+            'history.filterWorkOrderAll': '— 全部 —',
+            'history.pageSize': '每页记录数',
             'history.refresh': '↻ 刷新',
             'history.printedSerials': '已打印序列号',
             'history.colSerial': '序列号',
@@ -192,10 +229,33 @@
             'history.backSnLabel': '← 返回 SN 标签打印',
             'history.loading': '加载中…',
             'history.noData': '暂无数据。',
+            'history.firstPage': '首页',
             'history.prevPage': '← 上一页',
             'history.nextPage': '下一页 →',
+            'history.lastPage': '尾页',
             'history.page': '第',
-            'history.records': '条记录'
+            'history.records': '条记录',
+
+            // ── Server-side error messages (returned as errorCode + errorParams) ──
+            'error.common.invalidVariant': "无效的颜色代码：'{variant}'。",
+            'error.common.missingData': '缺少数据。',
+            'error.common.unexpectedError': '发生错误：{message}',
+            'error.workOrder.missing': '请输入工单号。',
+            'error.workOrder.notFoundOdoo': "在 Odoo 中未找到工单 '{wo}'。",
+            'error.workOrder.colorUnknown': "无法确定工单 '{wo}' 的颜色。",
+            'error.workOrder.invalidQuantity': "工单 '{wo}' 没有有效的数量。",
+            'error.workOrder.unresolvedColor': "无法识别 Odoo 返回的颜色 '{color}'。",
+            'error.workOrder.exhausted': "工单 '{wo}' 已打印满额（{printed}/{total}）。",
+            'error.workOrder.totalUnavailable': "无法确定工单 '{wo}' 的总数量。",
+            'error.password.incorrect': '密码错误。',
+            'error.reprint.missingSerial': '请输入序列号。',
+            'error.reprint.notFound': "未找到序列号 '{serial}'。",
+            'error.print.invalidQuantity': '数量必须在 1 到 {max} 之间。',
+            'error.print.invalidLine': '产线无效（只能是 0 或 1）。',
+            'error.print.workOrderQuantityExceeded': "工单 '{wo}' 仅剩 {remaining}（总数 {total}，已打印 {printed}）。",
+            'error.print.serialCapacityExceeded': '无法生成更多序列号：流水号将超过 ZZZ（{max}）。{color} / 产线 {line} / {date} 仅剩 {remaining} 个可用序列号。',
+            'error.print.concurrencyFailed': '由于多次冲突，无法生成序列号，请重试。',
+            'error.odoo.cookieNotConfigured': '尚未配置 Odoo cookie，请更新 SVN_Defect_Cookie 表。'
         }}
     };
 
@@ -210,6 +270,24 @@
         }
         var dict = resources[currentLang()].translation;
         return dict[key] || key;
+    }
+
+    // Dịch lỗi trả về từ API (body = { ok:false, error, errorCode?, errorParams? })
+    // sang ngôn ngữ đang chọn. Nếu không có errorCode hoặc chưa có bản dịch cho mã đó,
+    // rơi về "error" gốc (tiếng Việt từ server) hoặc fallback truyền vào.
+    function translateApiError(body, fallback) {
+        if (body && body.errorCode) {
+            var key = 'error.' + body.errorCode;
+            var template = t(key);
+            if (template !== key) {
+                var params = body.errorParams || {};
+                Object.keys(params).forEach(function (k) {
+                    template = template.split('{' + k + '}').join(params[k]);
+                });
+                return template;
+            }
+        }
+        return (body && body.error) || fallback || 'Unknown error.';
     }
 
     function applyTranslations() {
@@ -274,7 +352,7 @@
         }
     }
 
-    window.SakuraI18n = { t: t, switchLang: switchLang };
+    window.SakuraI18n = { t: t, switchLang: switchLang, translateApiError: translateApiError };
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', start);

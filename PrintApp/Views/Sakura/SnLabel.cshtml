@@ -275,9 +275,13 @@
                             <span class="k" data-i18n="snlabel.color">Color</span>
                             <span class="v" id="woColor">—</span>
                         </div>
+                        <div class="snl-readout-row">
+                            <span class="k" data-i18n="snlabel.woRemaining">Remaining / Total</span>
+                            <span class="v big" id="woRemaining">—</span>
+                        </div>
                         <div class="snl-readout-row" style="border-bottom:none;padding-bottom:0">
-                            <span class="k" data-i18n="snlabel.quantity">Quantity</span>
-                            <span class="v big" id="woQuantity">—</span>
+                            <span class="k" data-i18n="snlabel.woPrinted">Already Printed</span>
+                            <span class="v muted" id="woPrinted">—</span>
                         </div>
                     </div>
                 </div>
@@ -539,7 +543,8 @@
     const $woStatus   = document.getElementById('woStatus');
     const $woResolved = document.getElementById('woResolved');
     const $woColor    = document.getElementById('woColor');
-    const $woQuantity = document.getElementById('woQuantity');
+    const $woRemaining= document.getElementById('woRemaining');
+    const $woPrinted  = document.getElementById('woPrinted');
 
     const $pwOverlay  = document.getElementById('pwModalOverlay');
     const $pwInput    = document.getElementById('pwInput');
@@ -554,6 +559,8 @@
 
     let entryMode = 'wo'; // always defaults to Work Order on page load
     let woResolvedOk = false;
+    let woTotalQuantity = null; // tổng số lượng của WO theo Odoo, cần gửi kèm lúc PRINT để server re-check
+    let woDateLocked = false; // true nếu WO này đã in dở — ngày sản xuất bị khóa theo lần in đầu tiên
 
     const $stLast = document.getElementById('stLast');
     const $stNext = document.getElementById('stNext');
@@ -591,8 +598,14 @@
         document.querySelectorAll('.sk-mode-tab').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
         $woPanel.style.display = mode === 'wo' ? '' : 'none';
         $reprintSection.style.display = mode === 'manual' ? '' : 'none';
+        // Color luôn khóa ở tab Work Order (đến từ Odoo); Quantity thì cho sửa —
+        // để người dùng có thể in ít hơn tổng số lượng WO (vd in trước 100/3000 hôm nay).
         $variant.disabled = mode === 'wo';
-        $quantity.readOnly = mode === 'wo';
+        $quantity.readOnly = false;
+        $quantity.max = mode === 'wo' ? (woTotalQuantity || WORKORDER_MAX_QUANTITY) : MANUAL_MAX_QUANTITY;
+        // Ngày sản xuất chỉ được chọn tự do khi WO này CHƯA in lần nào — nếu đã in dở,
+        // ngày bị khóa theo lần in đầu tiên (server cũng tự khóa lại dù form gửi gì đi nữa).
+        $prodDate.disabled = mode === 'wo' && woDateLocked;
         updatePrintButtonState();
     }
 
@@ -669,17 +682,35 @@
         try {
             const res = await fetch(`${BASE}/api/sakura/snlabel/workorder-lookup?workOrder=${encodeURIComponent(wo)}`);
             const body = await res.json();
-            if (!res.ok || !body.ok) throw new Error(body.error || 'Lookup failed.');
+            if (!res.ok || !body.ok) throw new Error(window.SakuraI18n.translateApiError(body, 'Lookup failed.'));
 
             $variant.value = body.data.variant;
             updateColorDot();
-            $quantity.value = body.data.quantity;
+
+            woTotalQuantity = body.data.totalQuantity;
+            // Mặc định điền số lượng còn lại — người dùng có thể sửa xuống thấp hơn
+            // nếu hôm nay chỉ muốn in 1 phần (vd 100/3000), phần còn lại tự động dồn
+            // sang lần in sau cho cùng Work Order này.
+            $quantity.value = body.data.remainingQuantity;
+            $quantity.max = body.data.remainingQuantity;
+
+            // WO đã in dở -> khóa ngày theo lần in đầu tiên (chỉ WO hoàn toàn mới mới
+            // được chọn ngày tự do). Server cũng tự khóa lại dù form gửi giá trị gì.
+            if (body.data.lockedProductionDate) {
+                $prodDate.value = body.data.lockedProductionDate.slice(0, 10);
+                woDateLocked = true;
+            } else {
+                woDateLocked = false;
+            }
+            $prodDate.disabled = woDateLocked;
+
             $woColor.textContent = body.data.color;
-            $woQuantity.textContent = body.data.quantity;
+            $woRemaining.textContent = `${body.data.remainingQuantity} / ${body.data.totalQuantity}`;
+            $woPrinted.textContent = body.data.printedQuantity;
             $woResolved.style.display = 'flex';
             woResolvedOk = true;
 
-            showStatus($woStatus, `✓ ${body.data.color} — ${body.data.quantity} pcs.`, 'ok');
+            showStatus($woStatus, `✓ ${body.data.color} — ${body.data.remainingQuantity} pcs remaining.`, 'ok');
             loadStatus();
         } catch (e) {
             showStatus($woStatus, `✗ ${e.message}`, 'err');
@@ -695,6 +726,9 @@
     $workOrder.addEventListener('input', () => {
         if (woResolvedOk) {
             woResolvedOk = false;
+            woTotalQuantity = null;
+            woDateLocked = false;
+            $prodDate.disabled = false;
             $woResolved.style.display = 'none';
             updatePrintButtonState();
         }
@@ -712,7 +746,7 @@
         try {
             const res = await fetch(`${BASE}/api/sakura/snlabel/reprint?serialNumber=${encodeURIComponent(sn)}`);
             const body = await res.json();
-            if (!res.ok || !body.ok) throw new Error(body.error || 'Serial not found.');
+            if (!res.ok || !body.ok) throw new Error(window.SakuraI18n.translateApiError(body, 'Serial not found.'));
 
             const zpl = body.data.zpl;
             const copies = parseInt($copies.value) || 1;
@@ -877,7 +911,7 @@
         try {
             const res = await fetch(`${BASE}/api/sakura/snlabel/status?${params}`);
             const body = await res.json();
-            if (!res.ok || !body.ok) throw new Error(body.error || 'Failed to load status.');
+            if (!res.ok || !body.ok) throw new Error(window.SakuraI18n.translateApiError(body, 'Failed to load status.'));
             renderStatus(body.data);
         } catch (e) {
             $stLast.textContent = '—';
@@ -919,10 +953,20 @@
         URL.revokeObjectURL(url);
     }
 
+    // Nhập thủ công giữ mức thấp để tránh gõ nhầm; in theo Work Order tin tưởng
+    // số liệu từ Odoo nên cho phép cao hơn (khớp với SakuraService.ManualMaxQuantity /
+    // WorkOrderMaxQuantity ở server).
+    const MANUAL_MAX_QUANTITY = 500;
+    const WORKORDER_MAX_QUANTITY = 5000;
+
     async function doPrint() {
+        // Ở tab Work Order, giới hạn thật là "còn lại bao nhiêu" (đã lookup và ghi vào
+        // $quantity.max), không phải trần cứng 5000 — người dùng có thể in ít hơn
+        // (vd 100/3000 hôm nay), phần dư tự động dồn sang lần in kế tiếp cho cùng WO.
+        const maxQty = entryMode === 'wo' ? (parseInt($quantity.max) || WORKORDER_MAX_QUANTITY) : MANUAL_MAX_QUANTITY;
         const qty = parseInt($quantity.value) || 0;
-        if (qty < 1 || qty > 500) {
-            showStatus($printStatus, '✗ Quantity must be between 1 and 500.', 'err');
+        if (qty < 1 || qty > maxQty) {
+            showStatus($printStatus, `✗ Quantity must be between 1 and ${maxQty}.`, 'err');
             return;
         }
 
@@ -940,7 +984,7 @@
                 })
             });
             const body = await res.json();
-            if (!res.ok || body.ok === false) throw new Error(body.error || 'Print failed.');
+            if (!res.ok || body.ok === false) throw new Error(window.SakuraI18n.translateApiError(body, 'Print failed.'));
 
             lastZpl = body.zpl;
             lastBatchId = body.batchId;
@@ -998,10 +1042,14 @@
             }
             showStatus($printStatus, msg, statusType);
 
-            // Work Order mode: require a fresh scan/lookup before the next print,
+            // Work Order mode: require a fresh scan/lookup before the next print
+            // (also re-fetches the up-to-date remaining quantity for this WO),
             // instead of letting the same resolved quantity be reused blindly.
             if (entryMode === 'wo') {
                 woResolvedOk = false;
+                woTotalQuantity = null;
+                woDateLocked = false;
+                $prodDate.disabled = false;
                 $workOrder.value = '';
                 $woResolved.style.display = 'none';
                 $woStatus.className = 't-status';

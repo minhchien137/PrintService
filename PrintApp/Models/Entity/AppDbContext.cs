@@ -12,6 +12,7 @@ public class AppDbContext : DbContext
     public DbSet<SVNToastSerialInfo> SVNToastSerialInfos { get; set; }
     public DbSet<SnLabelPrint> SnLabelPrints { get; set; }
     public DbSet<SakuraZplTemplate> SakuraZplTemplates { get; set; }
+    public DbSet<SvnDefectCookie> SvnDefectCookies { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
