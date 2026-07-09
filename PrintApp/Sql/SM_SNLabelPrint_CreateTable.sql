@@ -16,7 +16,8 @@ BEGIN
         RunningNumberInt    INT               NOT NULL,
         PrintedAt           DATETIME          NOT NULL,
         PrintedBy           NVARCHAR(100)     NULL,
-        BatchId             UNIQUEIDENTIFIER  NOT NULL
+        BatchId             UNIQUEIDENTIFIER  NOT NULL,
+        WorkOrder           NVARCHAR(50)      NULL
     );
 
     CREATE UNIQUE INDEX UX_SM_SNLabelPrint_SerialNumber
@@ -25,6 +26,20 @@ BEGIN
     -- Fast MAX(RunningNumberInt) lookup for the (date, line, variant) counter scope.
     CREATE INDEX IX_SM_SNLabelPrint_Counter
         ON dbo.SM_SNLabelPrint (ProductionDate, ProductionLine, Variant, RunningNumberInt);
+END
+GO
+
+-- Existing deployments created before the Work Order feature: add the column if missing.
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.SM_SNLabelPrint') AND name = 'WorkOrder')
+BEGIN
+    ALTER TABLE dbo.SM_SNLabelPrint ADD WorkOrder NVARCHAR(50) NULL;
+END
+GO
+
+-- Lookup batches / history by Work Order.
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID('dbo.SM_SNLabelPrint') AND name = 'IX_SM_SNLabelPrint_WorkOrder')
+BEGIN
+    CREATE INDEX IX_SM_SNLabelPrint_WorkOrder ON dbo.SM_SNLabelPrint (WorkOrder);
 END
 GO
 

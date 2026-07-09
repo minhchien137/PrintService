@@ -44,6 +44,9 @@ public class SnLabelPrint
     public string? PrintedBy { get; set; }
 
     public Guid BatchId { get; set; }
+
+    [StringLength(50)]
+    public string? WorkOrder { get; set; }
 }
 
 // ── Request / response DTOs ──────────────────────────────────────────────────
@@ -55,6 +58,20 @@ public class SnLabelPrintRequest
     public string Line { get; set; } = "";
     public int Quantity { get; set; } = 1;
     public string? PrintedBy { get; set; }
+    public string? WorkOrder { get; set; }
+}
+
+public class WorkOrderLookupResponse
+{
+    public string WorkOrder { get; set; } = "";
+    public string Variant { get; set; } = "";
+    public string Color { get; set; } = "";
+    public int Quantity { get; set; }
+}
+
+public class ManualUnlockRequest
+{
+    public string Password { get; set; } = "";
 }
 
 public class SnLabelSerialDto
@@ -106,4 +123,13 @@ public class SnLabelHistoryItemDto
     public DateTime PrintedAt { get; set; }
     public string? PrintedBy { get; set; }
     public Guid BatchId { get; set; }
+    public string? WorkOrder { get; set; }
+}
+
+public class SnLabelHistoryPageDto
+{
+    public List<SnLabelHistoryItemDto> Items { get; set; } = new();
+    public int TotalCount { get; set; }
+    public int Page { get; set; }
+    public int PageSize { get; set; }
 }

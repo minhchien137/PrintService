@@ -91,6 +91,18 @@
     .swatch-dot.pink  { background: var(--sn-pink); }
     .swatch-dot.green { background: var(--sn-green); }
 
+    /* Pagination footer */
+    .hist-pagination {
+        display: flex; align-items: center; justify-content: space-between;
+        margin-top: 16px; flex-wrap: wrap; gap: 10px;
+    }
+    .hist-pagination .info {
+        font-family: var(--mono); font-size: 11px; color: var(--ghost); letter-spacing: 0.5px;
+    }
+    .hist-pagination .pages { display: flex; align-items: center; gap: 10px; }
+    .t-btn-ghost:disabled { opacity: 0.35; cursor: not-allowed; }
+    .t-btn-ghost:disabled:hover { border-color: var(--rule); color: var(--ghost); }
+
     @@media (max-width: 720px) {
         .t-grid-auto { grid-template-columns: 1fr; }
     }
@@ -150,13 +162,22 @@
                     <th data-i18n="history.colSerial">Serial</th>
                     <th data-i18n="history.colColor">Color</th>
                     <th data-i18n="history.colLine">Line</th>
+                    <th data-i18n="history.colWorkOrder">Work Order</th>
                     <th data-i18n="history.colPrintedAt">Printed At</th>
                 </tr>
             </thead>
             <tbody id="histRows">
-                <tr><td colspan="4" style="text-align:center;color:var(--ghost);padding:16px">—</td></tr>
+                <tr><td colspan="5" style="text-align:center;color:var(--ghost);padding:16px">—</td></tr>
             </tbody>
         </table>
+
+        <div class="hist-pagination">
+            <div class="info" id="histPageInfo">—</div>
+            <div class="pages">
+                <button class="t-btn t-btn-ghost" id="btnHistPrev" data-i18n="history.prevPage">← Prev</button>
+                <button class="t-btn t-btn-ghost" id="btnHistNext" data-i18n="history.nextPage">Next →</button>
+            </div>
+        </div>
     </div>
 
     <div style="display:flex;gap:18px">
@@ -194,6 +215,13 @@
     const $histDate = document.getElementById('histDate');
     const $btnHistRefresh = document.getElementById('btnHistRefresh');
     const $histRows = document.getElementById('histRows');
+    const $histPageInfo = document.getElementById('histPageInfo');
+    const $btnHistPrev = document.getElementById('btnHistPrev');
+    const $btnHistNext = document.getElementById('btnHistNext');
+
+    const PAGE_SIZE = 20;
+    let currentPage = 1;
+    let lastTotalCount = 0;
 
     function todayStr() {
         const d = new Date();
@@ -211,23 +239,49 @@
     let lastRows = null;
 
     async function loadHistory() {
-        const params = new URLSearchParams({ date: $histDate.value });
-        $histRows.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--ghost);padding:16px">${t('history.loading', 'Loading…')}</td></tr>`;
+        const params = new URLSearchParams({ date: $histDate.value, page: currentPage, pageSize: PAGE_SIZE });
+        $histRows.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--ghost);padding:16px">${t('history.loading', 'Loading…')}</td></tr>`;
         try {
             const res = await fetch(`${BASE}/api/sakura/snlabel/history?${params}`);
             const body = await res.json();
             if (!res.ok || !body.ok) throw new Error(body.error || 'Failed to load history.');
-            lastRows = body.data;
+            lastRows = body.data.items;
+            lastTotalCount = body.data.totalCount;
+            currentPage = body.data.page;
             renderHistory(lastRows);
+            renderPagination();
         } catch (e) {
             lastRows = null;
-            $histRows.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--stamp);padding:16px">✗ ${e.message}</td></tr>`;
+            lastTotalCount = 0;
+            $histRows.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--stamp);padding:16px">✗ ${e.message}</td></tr>`;
+            renderPagination();
         }
     }
 
+    function renderPagination() {
+        const totalPages = Math.max(1, Math.ceil(lastTotalCount / PAGE_SIZE));
+        $histPageInfo.textContent = lastTotalCount === 0
+            ? t('history.noData', 'No data yet.')
+            : `${t('history.page', 'Page')} ${currentPage} / ${totalPages} — ${lastTotalCount} ${t('history.records', 'records')}`;
+        $btnHistPrev.disabled = currentPage <= 1;
+        $btnHistNext.disabled = currentPage >= totalPages;
+    }
+
+    $btnHistPrev.addEventListener('click', () => {
+        if (currentPage <= 1) return;
+        currentPage--;
+        loadHistory();
+    });
+    $btnHistNext.addEventListener('click', () => {
+        const totalPages = Math.max(1, Math.ceil(lastTotalCount / PAGE_SIZE));
+        if (currentPage >= totalPages) return;
+        currentPage++;
+        loadHistory();
+    });
+
     function renderHistory(rows) {
         if (!rows.length) {
-            $histRows.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--ghost);padding:16px">${t('history.noData', 'No data yet.')}</td></tr>`;
+            $histRows.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--ghost);padding:16px">${t('history.noData', 'No data yet.')}</td></tr>`;
             return;
         }
         $histRows.innerHTML = rows.map(r => {
@@ -238,18 +292,20 @@
                     <td>${r.serialNumber}</td>
                     <td><span class="swatch-dot ${meta.cls}"></span>${meta.name}</td>
                     <td>${lineLabel(r.productionLine)}</td>
+                    <td>${r.workOrder || '—'}</td>
                     <td>${printedAt}</td>
                 </tr>`;
         }).join('');
     }
 
-    $histDate.addEventListener('change', loadHistory);
-    $btnHistRefresh.addEventListener('click', loadHistory);
+    $histDate.addEventListener('change', () => { currentPage = 1; loadHistory(); });
+    $btnHistRefresh.addEventListener('click', () => { currentPage = 1; loadHistory(); });
 
     // Re-render the table (color names / line labels) when EN/ZH is switched,
     // without hitting the API again.
     document.addEventListener('sakura:lang-changed', () => {
         if (lastRows) renderHistory(lastRows);
+        renderPagination();
     });
 
     // ── init ──────────────────────────────────────────────────────────────────

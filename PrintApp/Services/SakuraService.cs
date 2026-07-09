@@ -1,6 +1,7 @@
 using System.Data;
 using System.Net.Sockets;
 using System.Text;
+using System.Text.Json;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using PrintApp.Data;
@@ -13,6 +14,7 @@ namespace PrintApp.Services;
 public class SakuraService
 {
     private readonly AppDbContext _context;
+    private readonly IHttpClientFactory _httpClientFactory;
 
     // Model hiện tại luôn là RM15A — để hằng số cho dễ đổi sau này.
     public const string Model = "RM15A";
@@ -31,9 +33,10 @@ public class SakuraService
     private static readonly Dictionary<string, string> VariantColorMap =
         Variants.ToDictionary(v => v.Variant, v => v.Color);
 
-    public SakuraService(AppDbContext context)
+    public SakuraService(AppDbContext context, IHttpClientFactory httpClientFactory)
     {
         _context = context;
+        _httpClientFactory = httpClientFactory;
     }
 
     // ── Base34 helpers ────────────────────────────────────────────────────────
@@ -74,6 +77,20 @@ public class SakuraService
     public static string ResolveColor(string variant) =>
         VariantColorMap.TryGetValue(variant, out var color) ? color : throw new ArgumentException($"Variant không hợp lệ: {variant}");
 
+    // Chấp nhận cả tên màu (không phân biệt hoa/thường) lẫn mã variant ("00"/"01"/"02")
+    // vì chưa biết API Work Order thật sẽ trả về dạng nào.
+    public static string? TryResolveVariantFromColor(string colorOrVariant)
+    {
+        if (string.IsNullOrWhiteSpace(colorOrVariant)) return null;
+        string s = colorOrVariant.Trim();
+
+        var byVariant = Variants.FirstOrDefault(v => string.Equals(v.Variant, s, StringComparison.OrdinalIgnoreCase));
+        if (byVariant.Variant != null) return byVariant.Variant;
+
+        var byColor = Variants.FirstOrDefault(v => string.Equals(v.Color, s, StringComparison.OrdinalIgnoreCase));
+        return byColor.Variant;
+    }
+
     // ── Serial number formatting ─────────────────────────────────────────────
 
     public static string BuildSerial(string variant, DateTime productionDate, string line, string runningNumber)
@@ -88,7 +105,7 @@ public class SakuraService
     // ── SN Label generation (concurrency-safe) ───────────────────────────────
 
     public async Task<List<SnLabelPrint>> GenerateNextSerialsAsync(
-        DateTime date, string variant, string line, int quantity, string? printedBy)
+        DateTime date, string variant, string line, int quantity, string? printedBy, string? workOrder = null)
     {
         if (quantity < 1 || quantity > 500)
             throw new ArgumentOutOfRangeException(nameof(quantity), "Số lượng phải từ 1 đến 500.");
@@ -140,7 +157,8 @@ public class SakuraService
                         RunningNumberInt = runningInt,
                         PrintedAt = printedAt,
                         PrintedBy = printedBy,
-                        BatchId = batchId
+                        BatchId = batchId,
+                        WorkOrder = workOrder
                     });
                 }
 
@@ -167,6 +185,69 @@ public class SakuraService
 
     private static bool IsUniqueViolation(DbUpdateException ex) =>
         ex.InnerException is SqlException sqlEx && (sqlEx.Number == 2601 || sqlEx.Number == 2627);
+
+    // ── Work Order lookup (in mode "In qua Work Order") ─────────────────────
+    //
+    // GỌI TẠM THỜI — chưa có API thật. Giả định hiện tại:
+    //   GET {apiUrl}?workOrder={workOrder}
+    //   → 200 OK { "color": "Blue", "quantity": 20 }   (color: tên màu hoặc mã variant "00"/"01"/"02", không phân biệt hoa/thường)
+    // Khi có API thật, chỉ cần sửa lại phần đọc "color"/"quantity" bên dưới cho khớp field thật.
+    public async Task<WorkOrderLookupResponse> LookupWorkOrderAsync(string workOrder, string apiUrl)
+    {
+        if (string.IsNullOrWhiteSpace(workOrder))
+            throw new ArgumentException("Work Order không được để trống.", nameof(workOrder));
+        if (string.IsNullOrWhiteSpace(apiUrl))
+            throw new InvalidOperationException("Chưa cấu hình địa chỉ API Work Order (Sakura:SnLabel:WorkOrderApiUrl).");
+
+        var client = _httpClientFactory.CreateClient();
+        client.Timeout = TimeSpan.FromSeconds(8);
+
+        string url = apiUrl + (apiUrl.Contains('?') ? "&" : "?") + "workOrder=" + Uri.EscapeDataString(workOrder);
+
+        using var res = await client.GetAsync(url);
+        if (!res.IsSuccessStatusCode)
+            throw new InvalidOperationException($"API Work Order trả về lỗi ({(int)res.StatusCode}).");
+
+        using var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync());
+        var root = doc.RootElement;
+
+        string? colorRaw = TryGetStringCaseInsensitive(root, "color");
+        int quantity = TryGetIntCaseInsensitive(root, "quantity") ?? 0;
+
+        if (string.IsNullOrWhiteSpace(colorRaw))
+            throw new InvalidOperationException("API Work Order không trả về màu (color).");
+        if (quantity < 1)
+            throw new InvalidOperationException("API Work Order không trả về số lượng (quantity) hợp lệ.");
+
+        string? variant = TryResolveVariantFromColor(colorRaw);
+        if (variant == null)
+            throw new InvalidOperationException($"Không nhận diện được màu '{colorRaw}' trả về từ API Work Order.");
+
+        return new WorkOrderLookupResponse
+        {
+            WorkOrder = workOrder,
+            Variant = variant,
+            Color = ResolveColor(variant),
+            Quantity = quantity
+        };
+    }
+
+    private static string? TryGetStringCaseInsensitive(JsonElement obj, string name)
+    {
+        foreach (var prop in obj.EnumerateObject())
+            if (string.Equals(prop.Name, name, StringComparison.OrdinalIgnoreCase))
+                return prop.Value.ValueKind == JsonValueKind.String ? prop.Value.GetString() : prop.Value.ToString();
+        return null;
+    }
+
+    private static int? TryGetIntCaseInsensitive(JsonElement obj, string name)
+    {
+        foreach (var prop in obj.EnumerateObject())
+            if (string.Equals(prop.Name, name, StringComparison.OrdinalIgnoreCase))
+                return prop.Value.ValueKind == JsonValueKind.Number && prop.Value.TryGetInt32(out int v) ? v
+                    : int.TryParse(prop.Value.ToString(), out int v2) ? v2 : null;
+        return null;
+    }
 
     // ── Status / summary ──────────────────────────────────────────────────────
 
@@ -218,13 +299,22 @@ public class SakuraService
 
     // ── History ───────────────────────────────────────────────────────────────
 
-    public async Task<List<SnLabelHistoryItemDto>> GetHistoryAsync(DateTime date)
+    public async Task<SnLabelHistoryPageDto> GetHistoryAsync(DateTime date, int page, int pageSize)
     {
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 200);
         DateTime prodDate = date.Date;
-        return await _context.SnLabelPrints
+
+        var query = _context.SnLabelPrints
             .AsNoTracking()
-            .Where(x => x.ProductionDate == prodDate)
+            .Where(x => x.ProductionDate == prodDate);
+
+        int totalCount = await query.CountAsync();
+
+        var items = await query
             .OrderByDescending(x => x.PrintedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(x => new SnLabelHistoryItemDto
             {
                 Id = x.Id,
@@ -234,9 +324,18 @@ public class SakuraService
                 ProductionLine = x.ProductionLine,
                 PrintedAt = x.PrintedAt,
                 PrintedBy = x.PrintedBy,
-                BatchId = x.BatchId
+                BatchId = x.BatchId,
+                WorkOrder = x.WorkOrder
             })
             .ToListAsync();
+
+        return new SnLabelHistoryPageDto
+        {
+            Items = items,
+            TotalCount = totalCount,
+            Page = page,
+            PageSize = pageSize
+        };
     }
 
     public async Task<List<SnLabelPrint>> GetByBatchAsync(Guid batchId)
@@ -246,6 +345,14 @@ public class SakuraService
             .Where(x => x.BatchId == batchId)
             .OrderBy(x => x.RunningNumberInt)
             .ToListAsync();
+    }
+
+    // ── Reprint by Serial (Manual mode) — re-emit ZPL for an already-printed serial ──
+    public async Task<SnLabelPrint?> FindBySerialAsync(string serialNumber)
+    {
+        return await _context.SnLabelPrints
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.SerialNumber == serialNumber.Trim());
     }
 
     // ── ZPL templates (stored in DB — SM_Sakura_ZplTemplate) ─────────────────

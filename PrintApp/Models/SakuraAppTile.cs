@@ -11,4 +11,8 @@ public class SakuraAppTile
     public string Subtitle { get; set; } = "";
     public string? Href { get; set; }
     public bool Enabled { get; set; } = true;
+
+    // Nếu có, tile này là 1 nhóm (folder) — hiển thị như 1 card riêng chứa các
+    // tile con bên trong thay vì 1 icon đơn trong lưới (vd "SN Label" chứa "Print" + "History").
+    public List<SakuraAppTile>? Items { get; set; }
 }

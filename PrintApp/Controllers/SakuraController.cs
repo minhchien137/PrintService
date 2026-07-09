@@ -34,21 +34,32 @@ public class SakuraController : Controller
         {
             new SakuraAppTile
             {
-                Key = "snlabel",
+                Key = "snlabelgroup",
                 Icon = "🏷️",
-                Title = "SN Label Print",
-                Subtitle = "Print serial number labels",
-                Href = Url.Content("~/sakura/snlabel"),
-                Enabled = true
-            },
-            new SakuraAppTile
-            {
-                Key = "history",
-                Icon = "🕘",
-                Title = "History",
-                Subtitle = "SN Label print history",
-                Href = Url.Content("~/sakura/snlabel/history"),
-                Enabled = true
+                Title = "SN Label",
+                Subtitle = "Serial number label printing",
+                Enabled = true,
+                Items = new List<SakuraAppTile>
+                {
+                    new SakuraAppTile
+                    {
+                        Key = "snlabel",
+                        Icon = "🖨️",
+                        Title = "Print",
+                        Subtitle = "Print serial number labels",
+                        Href = Url.Content("~/sakura/snlabel"),
+                        Enabled = true
+                    },
+                    new SakuraAppTile
+                    {
+                        Key = "history",
+                        Icon = "🕘",
+                        Title = "History",
+                        Subtitle = "SN Label print history",
+                        Href = Url.Content("~/sakura/snlabel/history"),
+                        Enabled = true
+                    }
+                }
             },
             new SakuraAppTile
             {
@@ -103,6 +114,38 @@ public class SakuraController : Controller
         }
     }
 
+    // ── API: Work Order lookup (mode "In qua Work Order") ──────────────────────
+
+    [HttpGet("/api/sakura/snlabel/workorder-lookup")]
+    public async Task<IActionResult> WorkOrderLookup([FromQuery] string workOrder)
+    {
+        if (string.IsNullOrWhiteSpace(workOrder))
+            return BadRequest(new { ok = false, error = "Thiếu Work Order." });
+
+        string apiUrl = _config["Sakura:SnLabel:WorkOrderApiUrl"] ?? "";
+        try
+        {
+            var result = await _snLabel.LookupWorkOrderAsync(workOrder.Trim(), apiUrl);
+            return Ok(new { ok = true, data = result });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { ok = false, error = ex.Message });
+        }
+    }
+
+    // ── API: unlock Manual print mode with a shared password ────────────────────
+
+    [HttpPost("/api/sakura/snlabel/verify-manual-password")]
+    public IActionResult VerifyManualPassword([FromBody] ManualUnlockRequest req)
+    {
+        string expected = _config["Sakura:SnLabel:ManualModePassword"] ?? "";
+        if (req == null || string.IsNullOrEmpty(expected) || req.Password != expected)
+            return Unauthorized(new { ok = false, error = "Sai mật khẩu." });
+
+        return Ok(new { ok = true });
+    }
+
     // ── API: print ────────────────────────────────────────────────────────────
 
     [HttpPost("/api/sakura/snlabel/print")]
@@ -114,7 +157,7 @@ public class SakuraController : Controller
         List<SnLabelPrint> rows;
         try
         {
-            rows = await _snLabel.GenerateNextSerialsAsync(req.Date, req.Variant, req.Line, req.Quantity, req.PrintedBy);
+            rows = await _snLabel.GenerateNextSerialsAsync(req.Date, req.Variant, req.Line, req.Quantity, req.PrintedBy, req.WorkOrder);
         }
         catch (ArgumentException ex)
         {
@@ -171,13 +214,45 @@ public class SakuraController : Controller
         return Ok(response);
     }
 
+    // ── API: reprint by serial (Manual mode) ────────────────────────────────────
+
+    [HttpGet("/api/sakura/snlabel/reprint")]
+    public async Task<IActionResult> Reprint([FromQuery] string serialNumber)
+    {
+        if (string.IsNullOrWhiteSpace(serialNumber))
+            return BadRequest(new { ok = false, error = "Thiếu Serial Number." });
+
+        var row = await _snLabel.FindBySerialAsync(serialNumber);
+        if (row == null)
+            return NotFound(new { ok = false, error = $"Không tìm thấy serial '{serialNumber.Trim()}'." });
+
+        string template = await _snLabel.GetZplTemplateAsync("SnLabel");
+        string zpl = SakuraService.BuildConcatenatedZpl(template, new[] { row.SerialNumber });
+
+        return Ok(new
+        {
+            ok = true,
+            data = new
+            {
+                row.SerialNumber,
+                row.Variant,
+                row.Color,
+                row.ProductionLine,
+                row.ProductionDate,
+                row.WorkOrder,
+                row.PrintedAt,
+                zpl
+            }
+        });
+    }
+
     // ── API: history ──────────────────────────────────────────────────────────
 
     [HttpGet("/api/sakura/snlabel/history")]
-    public async Task<IActionResult> History([FromQuery] DateTime date)
+    public async Task<IActionResult> History([FromQuery] DateTime date, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
-        var list = await _snLabel.GetHistoryAsync(date);
-        return Ok(new { ok = true, data = list });
+        var result = await _snLabel.GetHistoryAsync(date, page, pageSize);
+        return Ok(new { ok = true, data = result });
     }
 
     // ── API: re-download ZPL file for a batch ────────────────────────────────

@@ -5,6 +5,7 @@ using PrintApp.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews();
+builder.Services.AddHttpClient();
 builder.Services.AddScoped<ZplService>();
 
 // ── EF Core — cùng SQL Server với SVN_Tools ───────────────────────────────────
