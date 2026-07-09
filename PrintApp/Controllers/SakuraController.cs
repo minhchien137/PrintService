@@ -64,13 +64,9 @@ public class SakuraController : Controller
     }
 
     [HttpGet("/sakura/snlabel")]
-    public async Task<IActionResult> SnLabelIndex()
+    public IActionResult SnLabelIndex()
     {
-        // Máy in có target = "Sakura" trong SVN_Printer_Info_New để bind vào dropdown (giống trang Toast).
-        var printers = await _db.PrinterInfos
-            .Where(p => p.target == "Sakura")
-            .ToListAsync();
-        return View("~/Views/Sakura/SnLabel.cshtml", printers);
+        return View("~/Views/Sakura/SnLabel.cshtml");
     }
 
     [HttpGet("/sakura/snlabel/history")]

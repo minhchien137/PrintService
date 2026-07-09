@@ -1,4 +1,3 @@
-@model List<PrintApp.Models.PrinterInfo>
 @{
     ViewData["Title"] = "SN Label Print — Sakura";
 }
@@ -164,26 +163,43 @@
     .snl-serial-list div { display: flex; justify-content: space-between; gap: 12px; }
     .snl-serial-list .idx { color: #5a8f78; }
 
-    /* History collapsible */
-    .snl-history-toggle {
-        display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none;
-    }
-    .snl-history-body { display: none; margin-top: 14px; }
-    .snl-history-body.open { display: block; }
-
     @@media (max-width: 860px) {
         .snl-layout { flex-direction: column; }
         .snl-right { position: static; width: 100%; }
         .t-grid-2, .t-grid-3, .snl-summary-grid { grid-template-columns: 1fr; }
     }
+
+    /* ── Language switcher — fixed top-right, shared across all Sakura pages ── */
+    .sk-lang-switch {
+        position: fixed; top: 18px; right: 22px; z-index: 100;
+        display: flex; gap: 8px;
+        background: var(--paper); border: 1px solid var(--rule); border-radius: 20px;
+        padding: 5px 6px; box-shadow: 2px 3px 0 rgba(0,0,0,0.08);
+    }
+    .sk-lang-flag {
+        width: 26px; height: 26px; border-radius: 50%; overflow: hidden;
+        border: 1.5px solid transparent; padding: 0; cursor: pointer; background: none;
+        display: flex; align-items: center; justify-content: center;
+        opacity: 0.5; transition: opacity 0.15s, border-color 0.15s, transform 0.15s;
+    }
+    .sk-lang-flag img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .sk-lang-flag:hover { opacity: 0.85; transform: translateY(-1px); }
+    .sk-lang-flag.active { opacity: 1; border-color: var(--ink); box-shadow: 0 0 0 2px rgba(26,26,46,0.08); }
+
+    @@media (max-width: 560px) {
+        .sk-lang-switch { top: 12px; right: 12px; padding: 4px 5px; gap: 6px; }
+        .sk-lang-flag { width: 22px; height: 22px; }
+    }
 </style>
+
+@await Html.PartialAsync("_LangSwitcher")
 
 <div class="snl-page">
 
     <header class="snl-header">
         <div>
-            <h1>SN LABEL PRINT</h1>
-            <p>Serial Number Print — Sakura</p>
+            <h1 data-i18n="snlabel.title">SN LABEL PRINT</h1>
+            <p data-i18n="snlabel.subtitle">Serial Number Print — Sakura</p>
         </div>
         <div class="snl-badge">SAKURA</div>
     </header>
@@ -193,8 +209,13 @@
         <!-- ── Left: form + serial output + history ── -->
         <div class="snl-left">
 
-            <div class="t-section">
-                <div class="t-section-label">Printer Configuration</div>
+            <div class="t-section" style="position:relative">
+                <div class="t-section-label" data-i18n="snlabel.printerConfig">Printer Configuration</div>
+
+                <div class="node-indicator">
+                    <div class="node-dot" id="nodeDot"></div>
+                    <span id="nodeTxt">Print Service …</span>
+                </div>
 
                 <!-- Toggle TCP / USB — same component as the /Print page -->
                 <div class="mode-toggle" id="modeToggle" style="margin-bottom:18px">
@@ -212,27 +233,13 @@
 
                 <!-- TCP block -->
                 <div id="tcpBlock">
-                    <div class="t-grid t-grid-3 printer-grid">
+                    <div class="t-grid t-grid-2 printer-grid">
                         <div class="t-field">
-                            <label>Printer (DB)</label>
-                            <select id="printerId">
-                                <option value="">— Select printer —</option>
-                                @foreach (var p in Model ?? new List<PrintApp.Models.PrinterInfo>())
-                                {
-                                    <option value="@p.ID_Printer"
-                                            data-ip="@p.IP_Printer"
-                                            data-port="@p.Port_Printer">
-                                        @p.Name_Printer
-                                    </option>
-                                }
-                            </select>
-                        </div>
-                        <div class="t-field">
-                            <label>Printer IP</label>
+                            <label data-i18n="snlabel.printerIp">Printer IP</label>
                             <input type="text" id="printerIp" placeholder="192.168.1.100" />
                         </div>
                         <div class="t-field">
-                            <label>Port</label>
+                            <label data-i18n="snlabel.port">Port</label>
                             <input type="number" id="printerPort" value="9100" />
                         </div>
                     </div>
@@ -242,139 +249,120 @@
                 <div id="usbBlock" style="display:none">
                     <div class="usb-row">
                         <div class="t-field">
-                            <label>USB Printer</label>
+                            <label data-i18n="snlabel.usbPrinter">USB Printer</label>
                             <select id="usbSelect" disabled>
-                                <option value="">— Click 🔄 to scan —</option>
+                                <option value="" data-i18n="snlabel.usbScanHint">— Click 🔄 to scan —</option>
                             </select>
                             <div class="usb-status" id="usbStatus"></div>
                         </div>
                         <button class="btn-icon" id="btnRefreshUsb" type="button" title="Rescan printers">
-                            🔄 Refresh
+                            <span data-i18n="snlabel.refreshUsb">🔄 Refresh</span>
                         </button>
                     </div>
                 </div>
 
                 <div class="t-grid t-grid-2" style="margin-top:14px">
                     <div class="t-field">
-                        <label>Copies</label>
+                        <label data-i18n="snlabel.copies">Copies</label>
                         <input type="number" id="copies" value="1" min="1" max="10" />
                     </div>
                 </div>
                 <div class="t-actions" style="margin-top:16px">
-                    <button class="t-btn t-btn-ghost" id="btnSavePrinter">Save</button>
+                    <button class="t-btn t-btn-ghost" id="btnSavePrinter" data-i18n="snlabel.save">Save</button>
                 </div>
             </div>
 
             <div class="t-section">
-                <div class="t-section-label">Print Parameters</div>
+                <div class="t-section-label" data-i18n="snlabel.printParams">Print Parameters</div>
 
                 <div class="t-grid t-grid-2">
                     <div class="t-field">
-                        <label>Production Date</label>
+                        <label data-i18n="snlabel.prodDate">Production Date</label>
                         <input type="date" id="prodDate" />
                     </div>
                     <div class="t-field">
-                        <label>Line</label>
+                        <label data-i18n="snlabel.line">Line</label>
                         <select id="line">
-                            <option value="0">0 — Golden line</option>
-                            <option value="1">1 — Golden line</option>
+                            <option value="0" data-i18n="line.opt0">0 — Golden line</option>
+                            <option value="1" data-i18n="line.opt1">1 — Golden line</option>
                         </select>
                     </div>
                 </div>
 
                 <div class="t-grid t-grid-2" style="margin-top:16px">
                     <div class="t-field">
-                        <label>Color</label>
+                        <label data-i18n="snlabel.color">Color</label>
                         <div class="swatch-row">
                             <span id="colorDot" class="swatch-dot blue"></span>
                             <select id="variant">
-                                <option value="00">Blue (00)</option>
-                                <option value="01">Pink (01)</option>
-                                <option value="02">Green (02)</option>
+                                <option value="00" data-i18n="snlabel.colorOpt00">Blue (00)</option>
+                                <option value="01" data-i18n="snlabel.colorOpt01">Pink (01)</option>
+                                <option value="02" data-i18n="snlabel.colorOpt02">Green (02)</option>
                             </select>
                         </div>
                     </div>
                     <div class="t-field">
-                        <label>Quantity</label>
+                        <label data-i18n="snlabel.quantity">Quantity</label>
                         <input type="number" id="quantity" value="1" min="1" max="500" />
                     </div>
                 </div>
 
                 <div class="t-actions" style="margin-top:20px">
-                    <button class="t-btn t-btn-primary" id="btnPrint">PRINT</button>
-                    <button class="t-btn t-btn-ghost" id="btnRefresh">↻ Refresh</button>
+                    <button class="t-btn t-btn-primary" id="btnPrint" data-i18n="snlabel.printBtn">PRINT</button>
+                    <button class="t-btn t-btn-ghost" id="btnRefresh" data-i18n="snlabel.refreshBtn">↻ Refresh</button>
                 </div>
 
                 <div id="printStatus" class="t-status"></div>
             </div>
 
             <div class="t-section" id="serialOutputSection" style="display:none">
-                <div class="t-section-label">Generated Serials</div>
+                <div class="t-section-label" data-i18n="snlabel.generatedSerials">Generated Serials</div>
                 <div id="serialList" class="snl-serial-list"></div>
                 <div class="t-actions" style="margin-top:14px">
-                    <button class="t-btn t-btn-outline" id="btnDownloadZpl">⬇ Download .zpl</button>
+                    <button class="t-btn t-btn-outline" id="btnDownloadZpl" data-i18n="snlabel.downloadZpl">⬇ Download .zpl</button>
                 </div>
             </div>
 
-            <div class="t-section">
-                <div class="snl-history-toggle" id="historyToggle">
-                    <div class="t-section-label" style="margin-bottom:0;flex:1">
-                        History (selected date)
-                    </div>
-                    <span id="historyCaret" style="font-family:var(--mono);color:var(--ghost)">▾</span>
-                </div>
-                <div id="historyBody" class="snl-history-body">
-                    <table class="t-table">
-                        <thead>
-                            <tr>
-                                <th>Serial</th>
-                                <th>Color</th>
-                                <th>Line</th>
-                                <th>Printed At</th>
-                                <th>By</th>
-                            </tr>
-                        </thead>
-                        <tbody id="historyRows">
-                            <tr><td colspan="5" style="text-align:center;color:var(--ghost);padding:16px">—</td></tr>
-                        </tbody>
-                    </table>
-                </div>
+            <div style="display:flex;gap:18px">
+                <a href="@Url.Content("~/sakura")" data-i18n="snlabel.backHome" style="font-family:var(--mono);font-size:11px;color:var(--ghost);
+                    letter-spacing:1px;text-decoration:none;border-bottom:1px solid var(--rule);">
+                    ← Sakura Home
+                </a>
+                <a href="@Url.Content("~/sakura/snlabel/history")" data-i18n="snlabel.viewHistory" style="font-family:var(--mono);font-size:11px;color:var(--ghost);
+                    letter-spacing:1px;text-decoration:none;border-bottom:1px solid var(--rule);">
+                    View History →
+                </a>
             </div>
-
-            <a href="@Url.Content("~/")" style="font-family:var(--mono);font-size:11px;color:var(--ghost);
-                letter-spacing:1px;text-decoration:none;border-bottom:1px solid var(--rule);">
-                ← Back to home
-            </a>
 
         </div>
 
         <!-- ── Right: status panel ── -->
         <div class="snl-right">
             <div class="t-section">
-                <div class="t-section-label">Selection Status</div>
+                <div class="t-section-label" data-i18n="snlabel.selectionStatus">Selection Status</div>
 
                 <div class="snl-readout">
                     <div class="snl-readout-row">
-                        <span class="k">Last Printed</span>
+                        <span class="k" data-i18n="snlabel.lastPrinted">Last Printed</span>
                         <span class="v" id="stLast">—</span>
                     </div>
                     <div class="snl-readout-row">
-                        <span class="k">Next Serial</span>
+                        <span class="k" data-i18n="snlabel.nextSerial">Next Serial</span>
                         <span class="v big" id="stNext">—</span>
                     </div>
                     <div class="snl-readout-row">
-                        <span class="k">Printed Today</span>
+                        <span class="k" data-i18n="snlabel.printedToday">Printed Today</span>
                         <span class="v" id="stCount">0</span>
                     </div>
                     <div class="snl-readout-row" style="border-bottom:none;padding-bottom:0">
-                        <span class="k">Capacity Left</span>
+                        <span class="k" data-i18n="snlabel.capacityLeft">Capacity Left</span>
                         <span class="v muted" id="stRemaining">—</span>
                     </div>
                 </div>
             </div>
 
             <div class="t-section">
-                <div class="t-section-label">Color Summary</div>
+                <div class="t-section-label" data-i18n="snlabel.colorSummary">Color Summary</div>
                 <div class="snl-summary-grid" id="summaryGrid"></div>
             </div>
         </div>
@@ -383,25 +371,34 @@
 </div>
 
 @section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/i18next@23.10.1/i18next.min.js"></script>
+<script src="~/js/sakura-i18n.js" asp-append-version="true"></script>
 <script>
 (function () {
     const BASE = '@Url.Content("~")'.replace(/\/$/, '');
     const NODE_SERVICE = 'http://localhost:8021';
+
+    // t() reads the current language live via SakuraI18n — keeps dynamically
+    // rendered text (color summary cards) in sync with the EN/ZH flag.
+    function t(key, fallback) {
+        return window.SakuraI18n ? window.SakuraI18n.t(key) : fallback;
+    }
 
     function escHtml(str) {
         return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
     const COLOR_META = {
-        '00': { name: 'Blue',  cls: 'blue'  },
-        '01': { name: 'Pink',  cls: 'pink'  },
-        '02': { name: 'Green', cls: 'green' }
+        '00': { get name() { return t('color.blue',  'Blue');  }, cls: 'blue'  },
+        '01': { get name() { return t('color.pink',  'Pink');  }, cls: 'pink'  },
+        '02': { get name() { return t('color.green', 'Green'); }, cls: 'green' }
     };
 
     // Both line identifiers (0, 1) belong to the same physical line: "Golden line".
     // The digit is only the character stored in the serial / DB — display always shows the full name.
     function lineLabel(line) {
-        return `${line} — Golden line`;
+        const key = line === 1 || line === '1' ? 'line.opt1' : 'line.opt0';
+        return t(key, `${line} — Golden line`);
     }
 
     const $prodDate   = document.getElementById('prodDate');
@@ -416,11 +413,13 @@
     const $serialList = document.getElementById('serialList');
     const $btnDownload = document.getElementById('btnDownloadZpl');
 
-    const $printerId   = document.getElementById('printerId');
     const $printerIp   = document.getElementById('printerIp');
     const $printerPort = document.getElementById('printerPort');
     const $copies      = document.getElementById('copies');
     const $btnSavePrinter = document.getElementById('btnSavePrinter');
+
+    const $nodeDot = document.getElementById('nodeDot');
+    const $nodeTxt = document.getElementById('nodeTxt');
 
     const $lblTcp   = document.getElementById('lblTcp');
     const $lblUsb   = document.getElementById('lblUsb');
@@ -438,11 +437,7 @@
     const $stRemaining = document.getElementById('stRemaining');
     const $summaryGrid = document.getElementById('summaryGrid');
 
-    const $historyToggle = document.getElementById('historyToggle');
-    const $historyBody = document.getElementById('historyBody');
-    const $historyCaret = document.getElementById('historyCaret');
-    const $historyRows = document.getElementById('historyRows');
-
+    let lastStatusData = null;
     let lastZpl = '';
     let lastBatchId = '';
 
@@ -477,15 +472,6 @@
         if (v(LS.copies)) $copies.value = v(LS.copies);
         setPrintMode(v(LS.mode) === 'usb' ? 'usb' : 'tcp');
     }
-
-    // Auto-fill IP/Port when a DB printer is selected — same behavior as the Toast page.
-    $printerId.addEventListener('change', () => {
-        const opt = $printerId.selectedOptions[0];
-        if (opt && opt.value) {
-            $printerIp.value = opt.dataset.ip || '';
-            $printerPort.value = opt.dataset.port || '9100';
-        }
-    });
 
     $btnSavePrinter.addEventListener('click', () => {
         localStorage.setItem(LS.ip, $printerIp.value.trim());
@@ -549,6 +535,22 @@
 
     $btnRefreshUsb.addEventListener('click', loadUsbPrinters);
 
+    // ── Local Bridge health check — same pattern as the /Print page ──────────
+    async function checkNode() {
+        try {
+            const r = await fetch(`${NODE_SERVICE}/health`, { signal: AbortSignal.timeout(2500) });
+            if (r.ok) {
+                $nodeDot.className = 'node-dot alive';
+                $nodeTxt.textContent = 'Print Service — Online';
+                return;
+            }
+        } catch { /* offline */ }
+        $nodeDot.className = 'node-dot dead';
+        $nodeTxt.textContent = 'Print Service — Offline';
+    }
+    checkNode();
+    setInterval(checkNode, 8000);
+
     async function sendToBridgeUsb(zpl, printerName) {
         const res = await fetch(`${NODE_SERVICE}/print-usb`, {
             method: 'POST',
@@ -582,6 +584,7 @@
     }
 
     function renderStatus(data) {
+        lastStatusData = data;
         $stLast.textContent = data.lastSerial || 'None yet';
         $stNext.textContent = data.nextSerial || '—';
         $stCount.textContent = data.count;
@@ -596,37 +599,6 @@
                     <div class="count">${s.count}</div>
                     <div class="last">${s.lastSerial || 'none yet'}</div>
                 </div>`;
-        }).join('');
-    }
-
-    async function loadHistory() {
-        const params = new URLSearchParams({ date: $prodDate.value });
-        try {
-            const res = await fetch(`${BASE}/api/sakura/snlabel/history?${params}`);
-            const body = await res.json();
-            if (!res.ok || !body.ok) throw new Error(body.error || 'Failed to load history.');
-            renderHistory(body.data);
-        } catch (e) {
-            $historyRows.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--stamp);padding:16px">✗ ${e.message}</td></tr>`;
-        }
-    }
-
-    function renderHistory(rows) {
-        if (!rows.length) {
-            $historyRows.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--ghost);padding:16px">No data yet.</td></tr>`;
-            return;
-        }
-        $historyRows.innerHTML = rows.map(r => {
-            const meta = COLOR_META[r.variant] || { name: r.color, cls: '' };
-            const printedAt = new Date(r.printedAt).toLocaleString();
-            return `
-                <tr>
-                    <td>${r.serialNumber}</td>
-                    <td><span class="swatch-dot ${meta.cls}" style="display:inline-block;vertical-align:middle;margin-right:6px"></span>${meta.name}</td>
-                    <td>${lineLabel(r.productionLine)}</td>
-                    <td>${printedAt}</td>
-                    <td>${r.printedBy || '—'}</td>
-                </tr>`;
         }).join('');
     }
 
@@ -721,7 +693,6 @@
             showStatus($printStatus, msg, statusType);
 
             await loadStatus();
-            if ($historyBody.classList.contains('open')) await loadHistory();
         } catch (e) {
             showStatus($printStatus, `✗ ${e.message}`, 'err');
         } finally {
@@ -736,14 +707,14 @@
 
     $variant.addEventListener('change', () => { updateColorDot(); loadStatus(); });
     $line.addEventListener('change', loadStatus);
-    $prodDate.addEventListener('change', () => { loadStatus(); if ($historyBody.classList.contains('open')) loadHistory(); });
-    $btnRefresh.addEventListener('click', () => { loadStatus(); if ($historyBody.classList.contains('open')) loadHistory(); });
+    $prodDate.addEventListener('change', loadStatus);
+    $btnRefresh.addEventListener('click', loadStatus);
     $btnPrint.addEventListener('click', doPrint);
 
-    $historyToggle.addEventListener('click', () => {
-        const open = $historyBody.classList.toggle('open');
-        $historyCaret.textContent = open ? '▴' : '▾';
-        if (open) loadHistory();
+    // Re-render locally-cached status (color names / line labels) when EN/ZH
+    // is switched, without hitting the API again.
+    document.addEventListener('sakura:lang-changed', () => {
+        if (lastStatusData) renderStatus(lastStatusData);
     });
 
     // ── init ──────────────────────────────────────────────────────────────────
