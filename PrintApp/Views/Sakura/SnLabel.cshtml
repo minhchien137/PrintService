@@ -1,3 +1,4 @@
+@model List<PrintApp.Models.PrinterInfo>
 @{
     ViewData["Title"] = "SN Label Print — Sakura";
 }
@@ -11,6 +12,7 @@
         --rule:  #c8c0b0;
         --stamp: #c0392b;
         --ok:    #2c7a5a;
+
         --ghost: #8a8070;
         --mono:  'Azeret Mono', monospace;
         --body:  'DM Sans', sans-serif;
@@ -62,6 +64,13 @@
     .t-grid { display: grid; gap: 16px 20px; }
     .t-grid-2 { grid-template-columns: 1fr 1fr; }
     .t-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+
+    /* Keep inputs flush across columns even if labels differ in length/wrap */
+    .printer-grid { align-items: end; }
+
+    /* .usb-row / .btn-icon / .usb-status / .mode-toggle come from site.css —
+       this page uses .t-field instead of .field, so re-apply the flex sizing here. */
+    .usb-row .t-field { flex: 1; margin-bottom: 0; }
 
     .t-field label {
         display: block; font-family: var(--mono); font-size: 10px; letter-spacing: 1.5px;
@@ -174,7 +183,7 @@
     <header class="snl-header">
         <div>
             <h1>SN LABEL PRINT</h1>
-            <p>序列号打印 · Serial Number Print — Sakura</p>
+            <p>Serial Number Print — Sakura</p>
         </div>
         <div class="snl-badge">SAKURA</div>
     </header>
@@ -185,15 +194,87 @@
         <div class="snl-left">
 
             <div class="t-section">
-                <div class="t-section-label">打印参数 <span class="bi">/ Print Parameters</span></div>
+                <div class="t-section-label">Printer Configuration</div>
+
+                <!-- Toggle TCP / USB — same component as the /Print page -->
+                <div class="mode-toggle" id="modeToggle" style="margin-bottom:18px">
+                    <label id="lblTcp" class="active">
+                        <input type="radio" name="sakura-print-mode" value="tcp" checked />
+                        <span class="mode-icon">🌐</span>
+                        <span>TCP / IP</span>
+                    </label>
+                    <label id="lblUsb">
+                        <input type="radio" name="sakura-print-mode" value="usb" />
+                        <span class="mode-icon">🔌</span>
+                        <span>USB</span>
+                    </label>
+                </div>
+
+                <!-- TCP block -->
+                <div id="tcpBlock">
+                    <div class="t-grid t-grid-3 printer-grid">
+                        <div class="t-field">
+                            <label>Printer (DB)</label>
+                            <select id="printerId">
+                                <option value="">— Select printer —</option>
+                                @foreach (var p in Model ?? new List<PrintApp.Models.PrinterInfo>())
+                                {
+                                    <option value="@p.ID_Printer"
+                                            data-ip="@p.IP_Printer"
+                                            data-port="@p.Port_Printer">
+                                        @p.Name_Printer
+                                    </option>
+                                }
+                            </select>
+                        </div>
+                        <div class="t-field">
+                            <label>Printer IP</label>
+                            <input type="text" id="printerIp" placeholder="192.168.1.100" />
+                        </div>
+                        <div class="t-field">
+                            <label>Port</label>
+                            <input type="number" id="printerPort" value="9100" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- USB block -->
+                <div id="usbBlock" style="display:none">
+                    <div class="usb-row">
+                        <div class="t-field">
+                            <label>USB Printer</label>
+                            <select id="usbSelect" disabled>
+                                <option value="">— Click 🔄 to scan —</option>
+                            </select>
+                            <div class="usb-status" id="usbStatus"></div>
+                        </div>
+                        <button class="btn-icon" id="btnRefreshUsb" type="button" title="Rescan printers">
+                            🔄 Refresh
+                        </button>
+                    </div>
+                </div>
+
+                <div class="t-grid t-grid-2" style="margin-top:14px">
+                    <div class="t-field">
+                        <label>Copies</label>
+                        <input type="number" id="copies" value="1" min="1" max="10" />
+                    </div>
+                </div>
+                <div class="t-actions" style="margin-top:16px">
+                    <button class="t-btn t-btn-ghost" id="btnSavePrinter">Save</button>
+                </div>
+            </div>
+
+            <div class="t-section">
+                <div class="t-section-label">Print Parameters</div>
 
                 <div class="t-grid t-grid-2">
                     <div class="t-field">
-                        <label>生产日期 <span class="bi">/ Production Date</span></label>
+                        <label>Production Date</label>
                         <input type="date" id="prodDate" />
                     </div>
                     <div class="t-field">
-                        <label>产线 <span class="bi">/ Line</span></label>
+                        <label>Line</label>
                         <select id="line">
                             <option value="0">0 — Golden line</option>
                             <option value="1">1 — Golden line</option>
@@ -203,7 +284,7 @@
 
                 <div class="t-grid t-grid-2" style="margin-top:16px">
                     <div class="t-field">
-                        <label>颜色 <span class="bi">/ Color</span></label>
+                        <label>Color</label>
                         <div class="swatch-row">
                             <span id="colorDot" class="swatch-dot blue"></span>
                             <select id="variant">
@@ -214,31 +295,31 @@
                         </div>
                     </div>
                     <div class="t-field">
-                        <label>数量 <span class="bi">/ Quantity</span></label>
+                        <label>Quantity</label>
                         <input type="number" id="quantity" value="1" min="1" max="500" />
                     </div>
                 </div>
 
                 <div class="t-actions" style="margin-top:20px">
-                    <button class="t-btn t-btn-primary" id="btnPrint">打印 / PRINT</button>
-                    <button class="t-btn t-btn-ghost" id="btnRefresh">↻ 刷新 / Refresh</button>
+                    <button class="t-btn t-btn-primary" id="btnPrint">PRINT</button>
+                    <button class="t-btn t-btn-ghost" id="btnRefresh">↻ Refresh</button>
                 </div>
 
                 <div id="printStatus" class="t-status"></div>
             </div>
 
             <div class="t-section" id="serialOutputSection" style="display:none">
-                <div class="t-section-label">生成的序列号 <span class="bi">/ Generated Serials</span></div>
+                <div class="t-section-label">Generated Serials</div>
                 <div id="serialList" class="snl-serial-list"></div>
                 <div class="t-actions" style="margin-top:14px">
-                    <button class="t-btn t-btn-outline" id="btnDownloadZpl">⬇ 下载 ZPL / Download .zpl</button>
+                    <button class="t-btn t-btn-outline" id="btnDownloadZpl">⬇ Download .zpl</button>
                 </div>
             </div>
 
             <div class="t-section">
                 <div class="snl-history-toggle" id="historyToggle">
                     <div class="t-section-label" style="margin-bottom:0;flex:1">
-                        历史记录 <span class="bi">/ History (selected date)</span>
+                        History (selected date)
                     </div>
                     <span id="historyCaret" style="font-family:var(--mono);color:var(--ghost)">▾</span>
                 </div>
@@ -262,7 +343,7 @@
 
             <a href="@Url.Content("~/")" style="font-family:var(--mono);font-size:11px;color:var(--ghost);
                 letter-spacing:1px;text-decoration:none;border-bottom:1px solid var(--rule);">
-                ← Về trang chủ
+                ← Back to home
             </a>
 
         </div>
@@ -270,7 +351,7 @@
         <!-- ── Right: status panel ── -->
         <div class="snl-right">
             <div class="t-section">
-                <div class="t-section-label">当前状态 <span class="bi">/ Selection Status</span></div>
+                <div class="t-section-label">Selection Status</div>
 
                 <div class="snl-readout">
                     <div class="snl-readout-row">
@@ -293,7 +374,7 @@
             </div>
 
             <div class="t-section">
-                <div class="t-section-label">全颜色总览 <span class="bi">/ Color Summary</span></div>
+                <div class="t-section-label">Color Summary</div>
                 <div class="snl-summary-grid" id="summaryGrid"></div>
             </div>
         </div>
@@ -305,6 +386,11 @@
 <script>
 (function () {
     const BASE = '@Url.Content("~")'.replace(/\/$/, '');
+    const NODE_SERVICE = 'http://localhost:8021';
+
+    function escHtml(str) {
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
 
     const COLOR_META = {
         '00': { name: 'Blue',  cls: 'blue'  },
@@ -329,6 +415,22 @@
     const $serialSection = document.getElementById('serialOutputSection');
     const $serialList = document.getElementById('serialList');
     const $btnDownload = document.getElementById('btnDownloadZpl');
+
+    const $printerId   = document.getElementById('printerId');
+    const $printerIp   = document.getElementById('printerIp');
+    const $printerPort = document.getElementById('printerPort');
+    const $copies      = document.getElementById('copies');
+    const $btnSavePrinter = document.getElementById('btnSavePrinter');
+
+    const $lblTcp   = document.getElementById('lblTcp');
+    const $lblUsb   = document.getElementById('lblUsb');
+    const $tcpBlock = document.getElementById('tcpBlock');
+    const $usbBlock = document.getElementById('usbBlock');
+    const $usbSelect = document.getElementById('usbSelect');
+    const $usbStatus = document.getElementById('usbStatus');
+    const $btnRefreshUsb = document.getElementById('btnRefreshUsb');
+
+    let printMode = 'tcp';
 
     const $stLast = document.getElementById('stLast');
     const $stNext = document.getElementById('stNext');
@@ -360,6 +462,105 @@
         $colorDot.className = 'swatch-dot ' + (meta ? meta.cls : '');
     }
 
+    // ── Printer config — persisted in localStorage, same pattern as Toast / FQC pages ──
+    const LS = {
+        ip: 'sakura_snlabel_ip',
+        port: 'sakura_snlabel_port',
+        copies: 'sakura_snlabel_copies',
+        mode: 'sakura_snlabel_print_mode'
+    };
+
+    function loadPrinterConfig() {
+        const v = k => localStorage.getItem(k);
+        if (v(LS.ip)) $printerIp.value = v(LS.ip);
+        if (v(LS.port)) $printerPort.value = v(LS.port);
+        if (v(LS.copies)) $copies.value = v(LS.copies);
+        setPrintMode(v(LS.mode) === 'usb' ? 'usb' : 'tcp');
+    }
+
+    // Auto-fill IP/Port when a DB printer is selected — same behavior as the Toast page.
+    $printerId.addEventListener('change', () => {
+        const opt = $printerId.selectedOptions[0];
+        if (opt && opt.value) {
+            $printerIp.value = opt.dataset.ip || '';
+            $printerPort.value = opt.dataset.port || '9100';
+        }
+    });
+
+    $btnSavePrinter.addEventListener('click', () => {
+        localStorage.setItem(LS.ip, $printerIp.value.trim());
+        localStorage.setItem(LS.port, $printerPort.value.trim());
+        localStorage.setItem(LS.copies, $copies.value.trim());
+        showStatus($printStatus, '✓ Printer configuration saved.', 'ok');
+    });
+
+    // Browser → local bridge (localhost:8021) → printer, same flow as Toast / FQC pages.
+    async function sendToBridge(zpl, printerIp, printerPort) {
+        const res = await fetch(`${NODE_SERVICE}/print`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ zpl, printerIp, printerPort })
+        });
+        if (!res.ok) throw new Error('Failed to send print job to Local Bridge.');
+    }
+
+    // ── USB printing — same bridge endpoints as the /Print page ──────────────
+    function setPrintMode(mode) {
+        printMode = mode;
+        $lblTcp.classList.toggle('active', mode === 'tcp');
+        $lblUsb.classList.toggle('active', mode === 'usb');
+        $tcpBlock.style.display = mode === 'tcp' ? '' : 'none';
+        $usbBlock.style.display = mode === 'usb' ? '' : 'none';
+        localStorage.setItem(LS.mode, mode);
+        if (mode === 'usb' && $usbSelect.options.length <= 1) loadUsbPrinters();
+    }
+
+    $lblTcp.addEventListener('click', () => setPrintMode('tcp'));
+    $lblUsb.addEventListener('click', () => setPrintMode('usb'));
+
+    async function loadUsbPrinters() {
+        $usbSelect.innerHTML = '<option value="">⏳ Scanning…</option>';
+        $usbSelect.disabled = true;
+        $usbStatus.textContent = '';
+        $usbStatus.className = 'usb-status';
+
+        try {
+            const r = await fetch(`${NODE_SERVICE}/usb-printers`, { signal: AbortSignal.timeout(6000) });
+            const data = await r.json();
+
+            if (!data.printers || data.printers.length === 0) {
+                $usbSelect.innerHTML = '<option value="">— No printer found —</option>';
+                $usbStatus.textContent = 'No USB printer detected.';
+                $usbStatus.className = 'usb-status bad';
+                return;
+            }
+
+            $usbSelect.innerHTML = '<option value="">— Select printer —</option>' +
+                data.printers.map(p => `<option value="${escHtml(p)}">${escHtml(p)}</option>`).join('');
+            $usbSelect.disabled = false;
+            $usbStatus.textContent = `✓ Found ${data.printers.length} printer(s).`;
+            $usbStatus.className = 'usb-status ok';
+        } catch (err) {
+            $usbSelect.innerHTML = '<option value="">— Load error —</option>';
+            $usbStatus.textContent = 'Cannot connect to localhost:8021.';
+            $usbStatus.className = 'usb-status bad';
+        }
+    }
+
+    $btnRefreshUsb.addEventListener('click', loadUsbPrinters);
+
+    async function sendToBridgeUsb(zpl, printerName) {
+        const res = await fetch(`${NODE_SERVICE}/print-usb`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ zpl, printerName })
+        });
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data || data.success === false) {
+            throw new Error((data && data.error) || 'Failed to send print job to Local Bridge (USB).');
+        }
+    }
+
     async function loadStatus() {
         const params = new URLSearchParams({
             date: $prodDate.value,
@@ -369,7 +570,7 @@
         try {
             const res = await fetch(`${BASE}/api/sakura/snlabel/status?${params}`);
             const body = await res.json();
-            if (!res.ok || !body.ok) throw new Error(body.error || 'Không tải được trạng thái.');
+            if (!res.ok || !body.ok) throw new Error(body.error || 'Failed to load status.');
             renderStatus(body.data);
         } catch (e) {
             $stLast.textContent = '—';
@@ -403,7 +604,7 @@
         try {
             const res = await fetch(`${BASE}/api/sakura/snlabel/history?${params}`);
             const body = await res.json();
-            if (!res.ok || !body.ok) throw new Error(body.error || 'Không tải được lịch sử.');
+            if (!res.ok || !body.ok) throw new Error(body.error || 'Failed to load history.');
             renderHistory(body.data);
         } catch (e) {
             $historyRows.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--stamp);padding:16px">✗ ${e.message}</td></tr>`;
@@ -412,7 +613,7 @@
 
     function renderHistory(rows) {
         if (!rows.length) {
-            $historyRows.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--ghost);padding:16px">Chưa có dữ liệu.</td></tr>`;
+            $historyRows.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--ghost);padding:16px">No data yet.</td></tr>`;
             return;
         }
         $historyRows.innerHTML = rows.map(r => {
@@ -444,7 +645,7 @@
     async function doPrint() {
         const qty = parseInt($quantity.value) || 0;
         if (qty < 1 || qty > 500) {
-            showStatus($printStatus, '✗ Số lượng phải từ 1 đến 500.', 'err');
+            showStatus($printStatus, '✗ Quantity must be between 1 and 500.', 'err');
             return;
         }
 
@@ -461,7 +662,7 @@
                 })
             });
             const body = await res.json();
-            if (!res.ok || body.ok === false) throw new Error(body.error || 'In thất bại.');
+            if (!res.ok || body.ok === false) throw new Error(body.error || 'Print failed.');
 
             lastZpl = body.zpl;
             lastBatchId = body.batchId;
@@ -471,15 +672,53 @@
                 `<div><span class="idx">${String(i + 1).padStart(3, '0')}</span><span>${s.serialNumber}</span></div>`
             ).join('');
 
-            let msg = `✓ Đã in ${body.serials.length} serial (mode: ${body.printMode}).`;
-            if (body.printMode === 'DirectTcp') {
-                msg += body.directPrintSent
-                    ? ' Đã gửi trực tiếp tới máy in.'
-                    : ` Gửi trực tiếp thất bại: ${body.directPrintError || 'lỗi không rõ'}.`;
+            let msg = `✓ Generated ${body.serials.length} serial(s).`;
+            let statusType = 'ok';
+
+            const copies = parseInt($copies.value) || 1;
+
+            if (printMode === 'usb') {
+                const printerName = $usbSelect.value;
+                if (printerName) {
+                    try {
+                        for (let i = 0; i < copies; i++) {
+                            await sendToBridgeUsb(lastZpl, printerName);
+                        }
+                        msg += ` Sent to USB printer "${printerName}" (Local Bridge).`;
+                    } catch (e) {
+                        statusType = 'err';
+                        msg += ` ✗ Failed to send to printer: ${e.message}`;
+                    }
+                } else {
+                    downloadZplFile(lastZpl, `sn-labels-${lastBatchId}.zpl`);
+                    msg += ' No USB printer selected — downloaded .zpl file instead. Scan and select a USB printer above to print directly next time.';
+                }
             } else {
-                downloadZplFile(lastZpl, `sn-labels-${lastBatchId}.zpl`);
+                const printerIp = $printerIp.value.trim();
+                const printerPort = parseInt($printerPort.value) || 9100;
+
+                if (printerIp) {
+                    // Browser → Local Bridge (localhost:8021) → printer — same flow as Toast / FQC.
+                    try {
+                        for (let i = 0; i < copies; i++) {
+                            await sendToBridge(lastZpl, printerIp, printerPort);
+                        }
+                        msg += ` Sent to ${printerIp}:${printerPort} (Local Bridge).`;
+                    } catch (e) {
+                        statusType = 'err';
+                        msg += ` ✗ Failed to send to printer: ${e.message}`;
+                    }
+                } else if (body.printMode === 'DirectTcp') {
+                    msg += body.directPrintSent
+                        ? ' Sent directly from server to printer.'
+                        : ` Direct send failed: ${body.directPrintError || 'unknown error'}.`;
+                    statusType = body.directPrintSent === false ? 'err' : 'ok';
+                } else {
+                    downloadZplFile(lastZpl, `sn-labels-${lastBatchId}.zpl`);
+                    msg += ' No printer IP set — downloaded .zpl file instead. Fill in the printer IP above to print directly via Local Bridge next time.';
+                }
             }
-            showStatus($printStatus, msg, body.printMode === 'DirectTcp' && body.directPrintSent === false ? 'err' : 'ok');
+            showStatus($printStatus, msg, statusType);
 
             await loadStatus();
             if ($historyBody.classList.contains('open')) await loadHistory();
@@ -509,6 +748,7 @@
 
     // ── init ──────────────────────────────────────────────────────────────────
     $prodDate.value = todayStr();
+    loadPrinterConfig();
     updateColorDot();
     loadStatus();
 })();

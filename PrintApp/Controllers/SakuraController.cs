@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using PrintApp.Data;
 using PrintApp.Models;
 using PrintApp.Services;
 
@@ -10,19 +12,83 @@ public class SakuraController : Controller
 {
     private readonly SakuraService _snLabel;
     private readonly IConfiguration _config;
+    private readonly AppDbContext _db;
 
-    public SakuraController(SakuraService snLabel, IConfiguration config)
+    public SakuraController(SakuraService snLabel, IConfiguration config, AppDbContext db)
     {
         _snLabel = snLabel;
         _config = config;
+        _db = db;
     }
 
     // ── View ──────────────────────────────────────────────────────────────────
 
-    [HttpGet("/sakura/snlabel")]
-    public IActionResult SnLabelIndex()
+    // Trang chủ Sakura — tổng hợp các chức năng dưới dạng ô chọn (app tile).
+    // Thêm chức năng mới: thêm 1 SakuraAppTile vào danh sách bên dưới.
+    [HttpGet("/sakura")]
+    public IActionResult Index()
     {
-        return View("~/Views/Sakura/SnLabel.cshtml");
+        // Title/Subtitle o day la fallback tieng Anh hien khi JS chua chay kip;
+        // ban dich day du (EN/ZH) nam trong wwwroot/js/sakura-i18n.js, khoa theo Key.
+        var tiles = new List<SakuraAppTile>
+        {
+            new SakuraAppTile
+            {
+                Key = "snlabel",
+                Icon = "🏷️",
+                Title = "SN Label Print",
+                Subtitle = "Print serial number labels",
+                Href = Url.Content("~/sakura/snlabel"),
+                Enabled = true
+            },
+            new SakuraAppTile
+            {
+                Key = "history",
+                Icon = "🕘",
+                Title = "History",
+                Subtitle = "SN Label print history",
+                Href = Url.Content("~/sakura/snlabel/history"),
+                Enabled = true
+            },
+            new SakuraAppTile
+            {
+                Key = "comingsoon",
+                Icon = "➕",
+                Title = "Coming soon",
+                Subtitle = "Next Sakura feature",
+                Href = null,
+                Enabled = false
+            }
+        };
+        return View("~/Views/Sakura/Index.cshtml", tiles);
+    }
+
+    [HttpGet("/sakura/snlabel")]
+    public async Task<IActionResult> SnLabelIndex()
+    {
+        // Máy in có target = "Sakura" trong SVN_Printer_Info_New để bind vào dropdown (giống trang Toast).
+        var printers = await _db.PrinterInfos
+            .Where(p => p.target == "Sakura")
+            .ToListAsync();
+        return View("~/Views/Sakura/SnLabel.cshtml", printers);
+    }
+
+    [HttpGet("/sakura/snlabel/history")]
+    public IActionResult SnLabelHistory()
+    {
+        return View("~/Views/Sakura/History.cshtml");
+    }
+
+    // ── API: printer list (for other Sakura pages that need it) ────────────────
+
+    [HttpGet("/api/sakura/printers")]
+    public async Task<IActionResult> GetPrinters()
+    {
+        var list = await _db.PrinterInfos
+            .Where(p => p.target == "Sakura")
+            .Select(p => new { p.ID_Printer, p.Name_Printer, p.IP_Printer, p.Port_Printer })
+            .ToListAsync();
+        return Ok(list);
     }
 
     // ── API: status ───────────────────────────────────────────────────────────

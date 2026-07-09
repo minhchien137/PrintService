@@ -1,0 +1,260 @@
+@{
+    ViewData["Title"] = "SN Label History — Sakura";
+}
+
+<style>
+    /* ── Reuse root vars — same tokens as Toast/FQC/SnLabel pages ─────────── */
+    :root {
+        --ink:   #1a1a2e;
+        --paper: #f5f0e8;
+        --cream: #ede8dc;
+        --rule:  #c8c0b0;
+        --stamp: #c0392b;
+        --ok:    #2c7a5a;
+        --ghost: #8a8070;
+        --mono:  'Azeret Mono', monospace;
+        --body:  'DM Sans', sans-serif;
+
+        --sn-blue: #2f5ea8;
+        --sn-pink: #c15b83;
+        --sn-green: var(--ok);
+    }
+
+    .snl-page { max-width: 1040px; margin: 0 auto; position: relative; z-index: 1; }
+
+    .snl-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        border-bottom: 2px solid var(--ink);
+        padding-bottom: 18px;
+        margin-bottom: 32px;
+    }
+    .snl-header h1 { font-family: var(--mono); font-size: 26px; font-weight: 700; letter-spacing: -1px; }
+    .snl-header p {
+        font-family: var(--mono); font-size: 11px; letter-spacing: 3px;
+        text-transform: uppercase; color: var(--ghost); margin-top: 5px;
+    }
+    .snl-badge {
+        background: #1a6644; color: #fff;
+        font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: 2px;
+        padding: 6px 12px; border-radius: 3px; transform: rotate(-2deg);
+        box-shadow: 2px 3px 0 rgba(0,0,0,0.15);
+    }
+
+    .t-section {
+        background: var(--paper); border: 1px solid var(--rule); border-radius: 4px;
+        padding: 24px 26px 20px; margin-bottom: 18px; box-shadow: 3px 4px 0 rgba(0,0,0,0.06);
+    }
+    .t-section-label {
+        font-family: var(--mono); font-size: 10px; letter-spacing: 3px; text-transform: uppercase;
+        color: var(--ghost); margin-bottom: 16px; display: flex; align-items: center; gap: 10px;
+    }
+    .t-section-label::after { content: ''; flex: 1; height: 1px; background: var(--rule); }
+
+    .t-grid { display: grid; gap: 16px 20px; }
+    .t-grid-auto { grid-template-columns: 220px auto 1fr; align-items: end; }
+
+    .t-field label {
+        display: block; font-family: var(--mono); font-size: 10px; letter-spacing: 1.5px;
+        text-transform: uppercase; color: var(--ghost); margin-bottom: 6px;
+    }
+    .t-field input {
+        width: 100%; background: transparent; border: none; border-bottom: 1.5px solid var(--rule);
+        padding: 7px 0; font-family: var(--mono); font-size: 14px; color: var(--ink);
+        outline: none; transition: border-color 0.2s;
+    }
+    .t-field input:focus { border-bottom-color: var(--ink); }
+
+    .t-btn {
+        font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+        text-transform: uppercase; border: none; cursor: pointer; padding: 11px 18px; border-radius: 3px;
+        transition: all 0.15s; display: flex; align-items: center; gap: 7px;
+    }
+    .t-btn-ghost { background: transparent; color: var(--ghost); border: 1.5px solid var(--rule); }
+    .t-btn-ghost:hover { border-color: var(--ink); color: var(--ink); }
+
+    .t-table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 12px; }
+    .t-table th {
+        text-align: left; padding: 8px 10px; border-bottom: 2px solid var(--ink);
+        letter-spacing: 1.5px; text-transform: uppercase; font-size: 10px; color: var(--ghost);
+    }
+    .t-table td { padding: 8px 10px; border-bottom: 1px solid var(--cream); vertical-align: middle; }
+    .t-table tr:hover td { background: var(--cream); }
+
+    .swatch-dot {
+        width: 13px; height: 13px; border-radius: 50%; flex-shrink: 0; display: inline-block;
+        vertical-align: middle; margin-right: 6px;
+        border: 1.5px solid rgba(0,0,0,0.25);
+    }
+    .swatch-dot.blue  { background: var(--sn-blue); }
+    .swatch-dot.pink  { background: var(--sn-pink); }
+    .swatch-dot.green { background: var(--sn-green); }
+
+    @@media (max-width: 720px) {
+        .t-grid-auto { grid-template-columns: 1fr; }
+    }
+
+    /* ── Language switcher — fixed top-right, shared across all Sakura pages ── */
+    .sk-lang-switch {
+        position: fixed; top: 18px; right: 22px; z-index: 100;
+        display: flex; gap: 8px;
+        background: var(--paper); border: 1px solid var(--rule); border-radius: 20px;
+        padding: 5px 6px; box-shadow: 2px 3px 0 rgba(0,0,0,0.08);
+    }
+    .sk-lang-flag {
+        width: 26px; height: 26px; border-radius: 50%; overflow: hidden;
+        border: 1.5px solid transparent; padding: 0; cursor: pointer; background: none;
+        display: flex; align-items: center; justify-content: center;
+        opacity: 0.5; transition: opacity 0.15s, border-color 0.15s, transform 0.15s;
+    }
+    .sk-lang-flag img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .sk-lang-flag:hover { opacity: 0.85; transform: translateY(-1px); }
+    .sk-lang-flag.active { opacity: 1; border-color: var(--ink); box-shadow: 0 0 0 2px rgba(26,26,46,0.08); }
+
+    @@media (max-width: 560px) {
+        .sk-lang-switch { top: 12px; right: 12px; padding: 4px 5px; gap: 6px; }
+        .sk-lang-flag { width: 22px; height: 22px; }
+    }
+</style>
+
+@await Html.PartialAsync("_LangSwitcher")
+
+<div class="snl-page">
+
+    <header class="snl-header">
+        <div>
+            <h1 data-i18n="history.title">SN LABEL HISTORY</h1>
+            <p data-i18n="history.subtitle">Serial Number Print — Sakura</p>
+        </div>
+        <div class="snl-badge">SAKURA</div>
+    </header>
+
+    <div class="t-section">
+        <div class="t-section-label" data-i18n="history.filter">Filter</div>
+        <div class="t-grid t-grid-auto">
+            <div class="t-field">
+                <label data-i18n="history.prodDate">Production Date</label>
+                <input type="date" id="histDate" />
+            </div>
+            <button class="t-btn t-btn-ghost" id="btnHistRefresh" data-i18n="history.refresh">↻ Refresh</button>
+            <div></div>
+        </div>
+    </div>
+
+    <div class="t-section">
+        <div class="t-section-label" data-i18n="history.printedSerials">Printed Serials</div>
+        <table class="t-table">
+            <thead>
+                <tr>
+                    <th data-i18n="history.colSerial">Serial</th>
+                    <th data-i18n="history.colColor">Color</th>
+                    <th data-i18n="history.colLine">Line</th>
+                    <th data-i18n="history.colPrintedAt">Printed At</th>
+                </tr>
+            </thead>
+            <tbody id="histRows">
+                <tr><td colspan="4" style="text-align:center;color:var(--ghost);padding:16px">—</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div style="display:flex;gap:18px">
+        <a href="@Url.Content("~/sakura")" data-i18n="history.backHome" style="font-family:var(--mono);font-size:11px;color:var(--ghost);
+            letter-spacing:1px;text-decoration:none;border-bottom:1px solid var(--rule);">
+            ← Sakura Home
+        </a>
+        <a href="@Url.Content("~/sakura/snlabel")" data-i18n="history.backSnLabel" style="font-family:var(--mono);font-size:11px;color:var(--ghost);
+            letter-spacing:1px;text-decoration:none;border-bottom:1px solid var(--rule);">
+            ← Back to SN Label Print
+        </a>
+    </div>
+
+</div>
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/i18next@23.10.1/i18next.min.js"></script>
+<script src="~/js/sakura-i18n.js" asp-append-version="true"></script>
+<script>
+(function () {
+    const BASE = '@Url.Content("~")'.replace(/\/$/, '');
+
+    // t() reads the current language live via SakuraI18n — keeps this table in
+    // sync with whichever flag (EN/ZH) is selected.
+    function t(key, fallback) {
+        return window.SakuraI18n ? window.SakuraI18n.t(key) : fallback;
+    }
+
+    const COLOR_META = {
+        '00': { get name() { return t('color.blue',  'Blue');  }, cls: 'blue'  },
+        '01': { get name() { return t('color.pink',  'Pink');  }, cls: 'pink'  },
+        '02': { get name() { return t('color.green', 'Green'); }, cls: 'green' }
+    };
+
+    const $histDate = document.getElementById('histDate');
+    const $btnHistRefresh = document.getElementById('btnHistRefresh');
+    const $histRows = document.getElementById('histRows');
+
+    function todayStr() {
+        const d = new Date();
+        const pad = n => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    }
+
+    // Both line identifiers (0, 1) belong to the same physical line: "Golden line".
+    // Reuses the same translation keys as the Line dropdown on the SN Label Print page.
+    function lineLabel(line) {
+        const key = line === 1 || line === '1' ? 'line.opt1' : 'line.opt0';
+        return t(key, `${line} — Golden line`);
+    }
+
+    let lastRows = null;
+
+    async function loadHistory() {
+        const params = new URLSearchParams({ date: $histDate.value });
+        $histRows.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--ghost);padding:16px">${t('history.loading', 'Loading…')}</td></tr>`;
+        try {
+            const res = await fetch(`${BASE}/api/sakura/snlabel/history?${params}`);
+            const body = await res.json();
+            if (!res.ok || !body.ok) throw new Error(body.error || 'Failed to load history.');
+            lastRows = body.data;
+            renderHistory(lastRows);
+        } catch (e) {
+            lastRows = null;
+            $histRows.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--stamp);padding:16px">✗ ${e.message}</td></tr>`;
+        }
+    }
+
+    function renderHistory(rows) {
+        if (!rows.length) {
+            $histRows.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--ghost);padding:16px">${t('history.noData', 'No data yet.')}</td></tr>`;
+            return;
+        }
+        $histRows.innerHTML = rows.map(r => {
+            const meta = COLOR_META[r.variant] || { name: r.color, cls: '' };
+            const printedAt = new Date(r.printedAt).toLocaleString();
+            return `
+                <tr>
+                    <td>${r.serialNumber}</td>
+                    <td><span class="swatch-dot ${meta.cls}"></span>${meta.name}</td>
+                    <td>${lineLabel(r.productionLine)}</td>
+                    <td>${printedAt}</td>
+                </tr>`;
+        }).join('');
+    }
+
+    $histDate.addEventListener('change', loadHistory);
+    $btnHistRefresh.addEventListener('click', loadHistory);
+
+    // Re-render the table (color names / line labels) when EN/ZH is switched,
+    // without hitting the API again.
+    document.addEventListener('sakura:lang-changed', () => {
+        if (lastRows) renderHistory(lastRows);
+    });
+
+    // ── init ──────────────────────────────────────────────────────────────────
+    $histDate.value = todayStr();
+    loadHistory();
+})();
+</script>
+}

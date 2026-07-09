@@ -326,18 +326,18 @@ app.get('/ping-printer', (req, res) => {
   socket.on('error',   (e) => fail(e.message));
 });
 
-// ── Start ─────────────────────────────────────────────────────────────────────
+// -- Start -----------------------------------------------------------------
 app.listen(PORT, () => {
   console.log('');
-  console.log('  ┌──────────────────────────────────────────┐');
-  console.log('  │   ZPL Print Service — localhost           │');
-  console.log(`  │   Port: ${PORT}  |  OS: ${os.platform().padEnd(10)}          │`);
-  console.log('  ├──────────────────────────────────────────┤');
-  console.log('  │  POST /print          → In TCP/IP        │');
-  console.log('  │  POST /print-usb      → In USB           │');
-  console.log('  │  GET  /usb-printers   → Liệt kê USB      │');
-  console.log('  │  GET  /health         → Kiểm tra         │');
-  console.log('  │  GET  /ping-printer   → Test TCP         │');
-  console.log('  └──────────────────────────────────────────┘');
+  console.log('  +--------------------------------------------+');
+  console.log('  |   ZPL Print Service - localhost             |');
+  console.log(`  |   Port: ${PORT}  |  OS: ${os.platform().padEnd(10)}          |`);
+  console.log('  +--------------------------------------------+');
+  console.log('  |  POST /print          -> In TCP/IP          |');
+  console.log('  |  POST /print-usb      -> In USB             |');
+  console.log('  |  GET  /usb-printers   -> Liet ke USB        |');
+  console.log('  |  GET  /health         -> Kiem tra           |');
+  console.log('  |  GET  /ping-printer   -> Test TCP           |');
+  console.log('  +--------------------------------------------+');
   console.log('');
 });

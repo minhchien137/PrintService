@@ -9,6 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 dotnet build
 
 # Run (development)
+
 dotnet run --project PrintApp
 
 # Publish (Windows x64 release)

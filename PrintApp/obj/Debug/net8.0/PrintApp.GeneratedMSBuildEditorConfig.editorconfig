@@ -27,8 +27,20 @@ build_property.EnableCodeStyleSeverity =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUHJpbnRcSW5kZXguY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
+[D:/PrintService/PrintApp/Views/Sakura/History.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2FrdXJhXEhpc3RvcnkuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/PrintService/PrintApp/Views/Sakura/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2FrdXJhXEluZGV4LmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
 [D:/PrintService/PrintApp/Views/Sakura/SnLabel.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2FrdXJhXFNuTGFiZWwuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/PrintService/PrintApp/Views/Sakura/_LangSwitcher.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2FrdXJhXF9MYW5nU3dpdGNoZXIuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
 [D:/PrintService/PrintApp/Views/Shared/_Layout.cshtml]

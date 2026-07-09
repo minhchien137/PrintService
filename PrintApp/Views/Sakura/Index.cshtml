@@ -1,0 +1,177 @@
+@model List<PrintApp.Models.SakuraAppTile>
+@{
+    ViewData["Title"] = "Sakura Home";
+}
+
+<style>
+    /* ── Reuse root vars — same tokens as Toast/FQC/SnLabel pages ─────────── */
+    :root {
+        --ink:   #1a1a2e;
+        --paper: #f5f0e8;
+        --cream: #ede8dc;
+        --rule:  #c8c0b0;
+        --stamp: #c0392b;
+        --ok:    #2c7a5a;
+        --ghost: #8a8070;
+        --mono:  'Azeret Mono', monospace;
+        --body:  'DM Sans', sans-serif;
+    }
+
+    .sk-page { max-width: 900px; margin: 0 auto; position: relative; z-index: 1; }
+
+    .sk-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        border-bottom: 2px solid var(--ink);
+        padding-bottom: 18px;
+        margin-bottom: 20px;
+    }
+    .sk-header h1 { font-family: var(--mono); font-size: 30px; font-weight: 700; letter-spacing: -1px; }
+    .sk-header p {
+        font-family: var(--mono); font-size: 11px; letter-spacing: 3px;
+        text-transform: uppercase; color: var(--ghost); margin-top: 6px;
+    }
+    .sk-badge {
+        background: #1a6644; color: #fff;
+        font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: 2px;
+        padding: 6px 12px; border-radius: 3px; transform: rotate(-2deg);
+        box-shadow: 2px 3px 0 rgba(0,0,0,0.15);
+    }
+
+    /* Section housing the app grid — same "paper card" language as t-section elsewhere */
+    .sk-board {
+        background: var(--paper); border: 1px solid var(--rule); border-radius: 4px;
+        padding: 40px 30px 44px; margin-bottom: 20px; box-shadow: 3px 4px 0 rgba(0,0,0,0.06);
+    }
+    .sk-board-label {
+        font-family: var(--mono); font-size: 10px; letter-spacing: 3px; text-transform: uppercase;
+        color: var(--ghost); margin-bottom: 34px; display: flex; align-items: center; gap: 10px;
+    }
+    .sk-board-label::after { content: ''; flex: 1; height: 1px; background: var(--rule); }
+
+    /* ── App grid — "home screen" tiles ───────────────────────────────────── */
+    .sk-app-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+        gap: 30px 20px;
+        justify-items: center;
+    }
+
+    .sk-app-tile {
+        display: flex; flex-direction: column; align-items: center; gap: 10px;
+        width: 112px; text-decoration: none; color: inherit; cursor: pointer;
+        border: none; background: none; padding: 0; font: inherit;
+    }
+    .sk-app-icon {
+        width: 72px; height: 72px; border-radius: 18px;
+        background: var(--cream); border: 1px solid var(--rule);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 30px; box-shadow: 3px 4px 0 rgba(0,0,0,0.08);
+        transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+    }
+    .sk-app-tile:hover .sk-app-icon {
+        transform: translate(-2px, -3px);
+        box-shadow: 5px 7px 0 rgba(0,0,0,0.12);
+        border-color: var(--ink);
+    }
+    .sk-app-tile:active .sk-app-icon {
+        transform: translate(0, 0);
+        box-shadow: 2px 2px 0 rgba(0,0,0,0.1);
+    }
+    .sk-app-tile .name {
+        font-family: var(--mono); font-size: 11px; font-weight: 700;
+        letter-spacing: 0.3px; text-align: center; line-height: 1.3; color: var(--ink);
+    }
+    .sk-app-tile .desc {
+        font-family: var(--body); font-size: 10.5px; color: var(--ghost);
+        text-align: center; line-height: 1.3;
+    }
+
+    /* Disabled / "coming soon" tile */
+    .sk-app-tile.disabled { cursor: default; }
+    .sk-app-tile.disabled .sk-app-icon {
+        background: transparent; border-style: dashed; box-shadow: none; opacity: 0.55;
+    }
+    .sk-app-tile.disabled:hover .sk-app-icon { transform: none; box-shadow: none; border-color: var(--rule); }
+    .sk-app-tile.disabled .name,
+    .sk-app-tile.disabled .desc { opacity: 0.55; }
+
+    .sk-footer {
+        text-align: center; margin-top: 6px;
+        font-family: var(--mono); font-size: 10px; letter-spacing: 1.5px;
+        text-transform: uppercase; color: var(--ghost);
+    }
+
+    /* ── Language switcher — fixed top-right, shared across all Sakura pages ── */
+    .sk-lang-switch {
+        position: fixed; top: 18px; right: 22px; z-index: 100;
+        display: flex; gap: 8px;
+        background: var(--paper); border: 1px solid var(--rule); border-radius: 20px;
+        padding: 5px 6px; box-shadow: 2px 3px 0 rgba(0,0,0,0.08);
+    }
+    .sk-lang-flag {
+        width: 26px; height: 26px; border-radius: 50%; overflow: hidden;
+        border: 1.5px solid transparent; padding: 0; cursor: pointer; background: none;
+        display: flex; align-items: center; justify-content: center;
+        opacity: 0.5; transition: opacity 0.15s, border-color 0.15s, transform 0.15s;
+    }
+    .sk-lang-flag img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .sk-lang-flag:hover { opacity: 0.85; transform: translateY(-1px); }
+    .sk-lang-flag.active { opacity: 1; border-color: var(--ink); box-shadow: 0 0 0 2px rgba(26,26,46,0.08); }
+
+    @@media (max-width: 560px) {
+        .sk-app-grid { grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 24px 14px; }
+        .sk-app-tile { width: 92px; }
+        .sk-app-icon { width: 62px; height: 62px; font-size: 26px; }
+        .sk-lang-switch { top: 12px; right: 12px; padding: 4px 5px; gap: 6px; }
+        .sk-lang-flag { width: 22px; height: 22px; }
+    }
+</style>
+
+@await Html.PartialAsync("_LangSwitcher")
+
+<div class="sk-page">
+
+    <header class="sk-header">
+        <div>
+            <h1>SAKURA</h1>
+            <p data-i18n="home.subtitle">Choose a function below</p>
+        </div>
+        <div class="sk-badge">SAKURA</div>
+    </header>
+
+    <div class="sk-board">
+        <div class="sk-board-label" data-i18n="home.section">Functions</div>
+
+        <div class="sk-app-grid">
+            @foreach (var tile in Model ?? new List<PrintApp.Models.SakuraAppTile>())
+            {
+                if (tile.Enabled && !string.IsNullOrEmpty(tile.Href))
+                {
+                    <a class="sk-app-tile" href="@tile.Href">
+                        <div class="sk-app-icon">@tile.Icon</div>
+                        <div class="name" data-i18n="tile.@(tile.Key).title">@tile.Title</div>
+                        <div class="desc" data-i18n="tile.@(tile.Key).desc">@tile.Subtitle</div>
+                    </a>
+                }
+                else
+                {
+                    <div class="sk-app-tile disabled" title="Coming soon" data-i18n-title="tile.@(tile.Key).title">
+                        <div class="sk-app-icon">@tile.Icon</div>
+                        <div class="name" data-i18n="tile.@(tile.Key).title">@tile.Title</div>
+                        <div class="desc" data-i18n="tile.@(tile.Key).desc">@tile.Subtitle</div>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+
+    <div class="sk-footer" data-i18n="home.footer">Sakura Toolkit — Zebra ZPL Print Service</div>
+
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/i18next@23.10.1/i18next.min.js"></script>
+    <script src="~/js/sakura-i18n.js" asp-append-version="true"></script>
+}
