@@ -3,24 +3,47 @@
 }
 
 <style>
-    /* ── Reuse root vars — same tokens as Toast/FQC pages ─────────────────── */
+    @@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Barlow:wght@600;700;800&display=swap');
+
+    /* ── Sigma Red design tokens — shared across all Sakura pages ─────────── */
     :root {
-        --ink:   #1a1a2e;
-        --paper: #f5f0e8;
-        --cream: #ede8dc;
-        --rule:  #c8c0b0;
-        --stamp: #c0392b;
-        --ok:    #2c7a5a;
+        --red:        #C8102E;
+        --red-dark:   #9B0B22;
+        --red-mid:    #E63950;
+        --red-light:  #FFE5E9;
+        --red-xlight: #FFF5F6;
+        --white:      #FFFFFF;
+        --gray-50:    #F9FAFB;
+        --gray-100:   #F3F4F6;
+        --gray-200:   #E5E7EB;
+        --gray-400:   #9CA3AF;
+        --gray-500:   #6B7280;
+        --gray-600:   #4B5563;
+        --gray-700:   #374151;
+        --gray-900:   #111827;
+        --success:    #059669;
+        --danger:     #DC2626;
+        --shadow-sm:  0 1px 3px rgba(200,16,46,0.08);
+        --shadow-md:  0 4px 20px rgba(200,16,46,0.12);
+        --shadow-lg:  0 8px 40px rgba(200,16,46,0.18);
+        --font-body:  'Inter', sans-serif;
+        --font-head:  'Barlow', sans-serif;
 
-        --ghost: #8a8070;
-        --mono:  'Azeret Mono', monospace;
-        --body:  'DM Sans', sans-serif;
-
-        /* SN Label variant colors — Green reuses the app's existing --ok (pass) green */
+        /* SN Label variant colors */
         --sn-blue: #2f5ea8;
         --sn-pink: #c15b83;
-        --sn-green: var(--ok);
+        --sn-green: var(--success);
     }
+
+    body {
+        background: var(--gray-50) !important;
+        background-image:
+            radial-gradient(ellipse at 10% 30%, rgba(200,16,46,0.05) 0%, transparent 55%),
+            radial-gradient(ellipse at 90% 70%, rgba(230,57,80,0.04) 0%, transparent 50%) !important;
+        color: var(--gray-900) !important;
+        font-family: var(--font-body) !important;
+    }
+    body::before { content: none !important; }
 
     .snl-page { max-width: 1040px; margin: 0 auto; position: relative; z-index: 1; }
 
@@ -28,37 +51,40 @@
         display: flex;
         align-items: flex-start;
         justify-content: space-between;
-        border-bottom: 2px solid var(--ink);
-        padding-bottom: 18px;
-        margin-bottom: 32px;
+        margin-bottom: 28px;
     }
-    .snl-header h1 { font-family: var(--mono); font-size: 26px; font-weight: 700; letter-spacing: -1px; }
+    .snl-header h1 { font-family: var(--font-head); font-size: 26px; font-weight: 800; letter-spacing: -0.3px; color: var(--red-dark); }
     .snl-header p {
-        font-family: var(--mono); font-size: 11px; letter-spacing: 3px;
-        text-transform: uppercase; color: var(--ghost); margin-top: 5px;
+        font-family: var(--font-body); font-size: 0.85rem;
+        color: var(--gray-500); margin-top: 5px;
+    }
+    .snl-header .accent-bar {
+        display: block; width: 40px; height: 4px; border-radius: 4px; margin-top: 12px;
+        background: linear-gradient(90deg, var(--red-dark), var(--red-mid));
     }
     .snl-badge {
-        background: #1a6644; color: #fff;
-        font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: 2px;
-        padding: 6px 12px; border-radius: 3px; transform: rotate(-2deg);
-        box-shadow: 2px 3px 0 rgba(0,0,0,0.15);
+        background: var(--red-xlight); color: var(--red-dark); border: 1px solid var(--red-light);
+        font-family: var(--font-body); font-size: 0.7rem; font-weight: 700; letter-spacing: 1px;
+        text-transform: uppercase; padding: 6px 14px 6px 10px; border-radius: 20px;
+        display: flex; align-items: center; gap: 6px; height: fit-content;
     }
+    .snl-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--red); flex-shrink: 0; }
 
     .snl-layout { display: flex; gap: 28px; align-items: flex-start; }
     .snl-left { flex: 1.3; min-width: 0; }
     .snl-right { flex: 1; min-width: 0; position: sticky; top: 24px; }
 
-    /* ── Reused section/grid/field/button primitives (same as Toast/FQC) ──── */
+    /* ── Reused section/grid/field/button primitives ──────────────────────── */
     .t-section {
-        background: var(--paper); border: 1px solid var(--rule); border-radius: 4px;
-        padding: 24px 26px 20px; margin-bottom: 18px; box-shadow: 3px 4px 0 rgba(0,0,0,0.06);
+        background: var(--white); border: 1px solid rgba(200,16,46,0.07); border-radius: 16px;
+        padding: 24px 26px 20px; margin-bottom: 18px; box-shadow: var(--shadow-md);
     }
     .t-section-label {
-        font-family: var(--mono); font-size: 10px; letter-spacing: 3px; text-transform: uppercase;
-        color: var(--ghost); margin-bottom: 16px; display: flex; align-items: center; gap: 10px;
+        font-family: var(--font-body); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+        color: var(--gray-700); margin-bottom: 16px; display: flex; align-items: center; gap: 10px;
     }
-    .t-section-label::after { content: ''; flex: 1; height: 1px; background: var(--rule); }
-    .t-section-label .bi { color: var(--rule); font-weight: 400; letter-spacing: 1px; text-transform: none; }
+    .t-section-label::after { content: ''; flex: 1; height: 1px; background: var(--gray-200); }
+    .t-section-label .bi { color: var(--gray-400); font-weight: 400; letter-spacing: 0.3px; text-transform: none; }
 
     .t-grid { display: grid; gap: 16px 20px; }
     .t-grid-2 { grid-template-columns: 1fr 1fr; }
@@ -67,66 +93,102 @@
     /* Keep inputs flush across columns even if labels differ in length/wrap */
     .printer-grid { align-items: end; }
 
-    /* .usb-row / .btn-icon / .usb-status / .mode-toggle come from site.css —
-       this page uses .t-field instead of .field, so re-apply the flex sizing here. */
     .usb-row .t-field { flex: 1; margin-bottom: 0; }
 
+    /* Reskin the shared site.css primitives this page also uses (loaded via
+       _Layout before this <style> block, so these rules win the cascade). */
+    .mode-toggle {
+        display: flex; gap: 0; margin-bottom: 18px;
+        border: 1.5px solid var(--gray-200); border-radius: 10px; overflow: hidden;
+    }
+    .mode-toggle label {
+        flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
+        padding: 11px 16px; font-family: var(--font-body); font-size: 0.75rem; font-weight: 700;
+        letter-spacing: 0.5px; text-transform: uppercase; color: var(--gray-500); cursor: pointer;
+        transition: all 0.2s ease; margin-bottom: 0; user-select: none; background: var(--white);
+    }
+    .mode-toggle label:first-of-type { border-right: 1.5px solid var(--gray-200); }
+    .mode-toggle input[type="radio"] { display: none; }
+    .mode-toggle label.active { background: linear-gradient(135deg, var(--red-dark), var(--red-mid)); color: var(--white); }
+
+    .node-indicator {
+        position: absolute; top: 20px; right: 24px; display: flex; align-items: center; gap: 6px;
+        font-family: var(--font-body); font-size: 0.7rem; font-weight: 600; color: var(--gray-500);
+    }
+    .node-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--gray-400); }
+    .node-dot.alive { background: var(--success); box-shadow: 0 0 6px var(--success); }
+    .node-dot.dead { background: var(--danger); }
+
+    .usb-status { font-family: var(--font-body); font-size: 0.75rem; font-weight: 600; margin-top: 6px; height: 14px; color: var(--gray-500); }
+    .usb-status.ok  { color: var(--success); }
+    .usb-status.bad { color: var(--danger); }
+
+    .btn-icon {
+        flex-shrink: 0; background: var(--white); border: 1.5px solid var(--gray-200); color: var(--gray-500);
+        font-family: var(--font-body); font-weight: 600; font-size: 0.8rem; min-height: 46px;
+        padding: 8px 14px; border-radius: 10px; cursor: pointer; margin-bottom: 0;
+        transition: all 0.2s ease; display: flex; align-items: center; gap: 5px; white-space: nowrap;
+    }
+    .btn-icon:hover { border-color: var(--red); color: var(--red); background: var(--red-xlight); }
+
     .t-field label {
-        display: block; font-family: var(--mono); font-size: 10px; letter-spacing: 1.5px;
-        text-transform: uppercase; color: var(--ghost); margin-bottom: 6px;
+        display: block; font-family: var(--font-body); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.5px;
+        text-transform: uppercase; color: var(--gray-700); margin-bottom: 6px;
     }
-    .t-field label .bi { color: var(--rule); text-transform: none; letter-spacing: 0.5px; }
+    .t-field label .bi { color: var(--gray-400); text-transform: none; letter-spacing: 0.3px; }
     .t-field input, .t-field select {
-        width: 100%; background: transparent; border: none; border-bottom: 1.5px solid var(--rule);
-        padding: 7px 0; font-family: var(--mono); font-size: 14px; color: var(--ink);
-        outline: none; transition: border-color 0.2s;
+        width: 100%; background: var(--white); border: 1.5px solid var(--gray-200); border-radius: 10px;
+        min-height: 46px; padding: 10px 14px; font-family: var(--font-body); font-weight: 500; font-size: 14px;
+        color: var(--gray-900); outline: none; transition: border-color 0.2s ease, box-shadow 0.2s ease;
     }
-    .t-field input:focus, .t-field select:focus { border-bottom-color: var(--ink); }
+    .t-field input:hover, .t-field select:hover { border-color: var(--red-mid); }
+    .t-field input:focus, .t-field select:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(200,16,46,0.1); }
     .t-field select {
         appearance: none; cursor: pointer;
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238a8070' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
-        background-repeat: no-repeat; background-position: right 4px center; padding-right: 24px;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239CA3AF' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+        background-repeat: no-repeat; background-position: right 14px center; padding-right: 34px;
     }
 
     .t-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 4px; }
     .t-btn {
-        font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
-        text-transform: uppercase; border: none; cursor: pointer; padding: 11px 18px; border-radius: 3px;
-        transition: all 0.15s; display: flex; align-items: center; gap: 7px;
+        font-family: var(--font-body); font-size: 0.8rem; font-weight: 600;
+        border: none; cursor: pointer; min-height: 46px; padding: 11px 18px; border-radius: 10px;
+        transition: all 0.2s ease; display: flex; align-items: center; gap: 7px;
     }
-    .t-btn-primary { background: var(--ink); color: var(--paper); box-shadow: 3px 3px 0 rgba(0,0,0,0.18); }
-    .t-btn-primary:hover:not(:disabled) { transform: translate(-1px,-1px); box-shadow: 4px 4px 0 rgba(0,0,0,0.18); }
-    .t-btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
-    .t-btn-outline { background: transparent; color: var(--ink); border: 1.5px solid var(--ink); box-shadow: 2px 2px 0 rgba(0,0,0,0.1); }
-    .t-btn-outline:hover:not(:disabled) { background: var(--ink); color: var(--paper); }
-    .t-btn-outline:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
-    .t-btn-ghost { background: transparent; color: var(--ghost); border: 1.5px solid var(--rule); }
-    .t-btn-ghost:hover { border-color: var(--ink); color: var(--ink); }
+    .t-btn-primary { background: linear-gradient(135deg, var(--red-dark), var(--red-mid)); color: var(--white); box-shadow: 0 4px 14px rgba(200,16,46,0.35); }
+    .t-btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(200,16,46,0.4); }
+    .t-btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+    .t-btn-outline { background: var(--white); color: var(--gray-500); border: 1.5px solid var(--gray-200); }
+    .t-btn-outline:hover:not(:disabled) { border-color: var(--red); color: var(--red); background: var(--red-xlight); }
+    .t-btn-outline:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+    .t-btn-ghost { background: var(--white); color: var(--gray-500); border: 1.5px solid var(--gray-200); }
+    .t-btn-ghost:hover { border-color: var(--red); color: var(--red); background: var(--red-xlight); }
 
     .t-status {
-        font-family: var(--mono); font-size: 12px; padding: 12px 16px; border-radius: 3px;
+        font-family: var(--font-body); font-size: 0.85rem; padding: 12px 16px; border-radius: 12px;
         display: none; align-items: flex-start; gap: 10px; margin-top: 14px; line-height: 1.5;
+        box-shadow: var(--shadow-sm);
     }
     .t-status.show { display: flex; }
-    .t-status.ok  { background: #e8f5ee; border-left: 3px solid var(--ok);    color: #1a4a30; }
-    .t-status.err { background: #fdf0ee; border-left: 3px solid var(--stamp); color: #6a1a10; }
+    .t-status.ok  { background: #ECFDF5; border-left: 3px solid var(--success); color: #065F46; }
+    .t-status.err { background: var(--red-xlight); border-left: 3px solid var(--danger); color: #7F1D1D; }
 
-    .t-table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 12px; }
+    .t-table { width: 100%; border-collapse: collapse; font-family: var(--font-body); font-size: 0.85rem; }
     .t-table th {
-        text-align: left; padding: 8px 10px; border-bottom: 2px solid var(--ink);
-        letter-spacing: 1.5px; text-transform: uppercase; font-size: 10px; color: var(--ghost);
+        text-align: left; padding: 8px 10px; border-bottom: 2px solid var(--gray-200);
+        letter-spacing: 0.5px; text-transform: uppercase; font-size: 0.7rem; font-weight: 700; color: var(--gray-500);
     }
-    .t-table td { padding: 8px 10px; border-bottom: 1px solid var(--cream); vertical-align: middle; }
-    .t-table tr:hover td { background: var(--cream); }
+    .t-table td { padding: 8px 10px; border-bottom: 1px dashed var(--gray-200); vertical-align: middle; }
+    .t-table tr:hover td { background: var(--gray-50); }
 
-    /* ── New: minimal additions specific to SN Label ──────────────────────── */
+    /* ── Minimal additions specific to SN Label ────────────────────────────── */
 
     /* Color select + swatch dot */
     .swatch-row { display: flex; align-items: center; gap: 8px; }
     .swatch-row select { flex: 1; }
     .swatch-dot {
         width: 13px; height: 13px; border-radius: 50%; flex-shrink: 0;
-        border: 1.5px solid rgba(0,0,0,0.25);
+        border: 1.5px solid rgba(0,0,0,0.15);
     }
     .swatch-dot.blue  { background: var(--sn-blue); }
     .swatch-dot.pink  { background: var(--sn-pink); }
@@ -136,69 +198,71 @@
     .snl-readout { display: flex; flex-direction: column; gap: 12px; margin-bottom: 4px; }
     .snl-readout-row {
         display: flex; justify-content: space-between; align-items: baseline;
-        border-bottom: 1px dashed var(--rule); padding-bottom: 10px;
+        border-bottom: 1px dashed var(--gray-200); padding-bottom: 10px;
     }
     .snl-readout-row .k {
-        font-family: var(--mono); font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--ghost);
+        font-family: var(--font-body); font-size: 0.7rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: var(--gray-500);
     }
-    .snl-readout-row .v { font-family: var(--mono); font-size: 15px; color: var(--ink); font-weight: 600; }
-    .snl-readout-row .v.big { font-size: 19px; letter-spacing: 1px; }
-    .snl-readout-row .v.muted { color: var(--ghost); font-weight: 400; font-size: 12px; }
+    .snl-readout-row .v { font-family: var(--font-body); font-size: 15px; color: var(--gray-900); font-weight: 600; }
+    .snl-readout-row .v.big { font-family: var(--font-head); font-size: 20px; font-weight: 700; color: var(--red-dark); letter-spacing: 0.3px; }
+    .snl-readout-row .v.muted { color: var(--gray-500); font-weight: 400; font-size: 12px; }
 
     /* Per-color summary cards */
     .snl-summary-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
     .snl-summary-card {
-        border: 1px solid var(--rule); border-radius: 4px; padding: 10px 12px;
-        background: var(--cream); display: flex; flex-direction: column; gap: 6px;
+        border: 1px solid var(--gray-200); border-radius: 14px; padding: 10px 12px;
+        background: var(--gray-50); display: flex; flex-direction: column; gap: 6px;
+        transition: all 0.2s ease;
     }
-    .snl-summary-card.active { border-color: var(--ink); background: var(--paper); }
-    .snl-summary-card .name { display: flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 11px; font-weight: 700; }
-    .snl-summary-card .count { font-family: var(--mono); font-size: 20px; font-weight: 700; }
-    .snl-summary-card .last { font-family: var(--mono); font-size: 10px; color: var(--ghost); word-break: break-all; }
+    .snl-summary-card.active { border-color: var(--red); background: var(--red-xlight); box-shadow: var(--shadow-sm); }
+    .snl-summary-card .name { display: flex; align-items: center; gap: 6px; font-family: var(--font-body); font-size: 11px; font-weight: 700; color: var(--gray-900); }
+    .snl-summary-card .count { font-family: var(--font-head); font-size: 22px; font-weight: 800; color: var(--red-dark); }
+    .snl-summary-card .last { font-family: var(--font-body); font-size: 10px; color: var(--gray-500); word-break: break-all; }
 
     /* Print mode tabs (Work Order / Manual) */
     .sk-mode-tabs { display: flex; gap: 10px; }
     .sk-mode-tab {
         flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
-        font-family: var(--mono); font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
-        padding: 12px 14px; border-radius: 4px; border: 1.5px solid var(--rule); background: var(--cream);
-        color: var(--ghost); cursor: pointer; transition: all 0.15s;
+        font-family: var(--font-body); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+        padding: 12px 14px; border-radius: 10px; border: 1.5px solid var(--gray-200); background: var(--white);
+        color: var(--gray-500); cursor: pointer; transition: all 0.2s ease;
     }
     .sk-mode-tab.active {
-        border-color: var(--ink); background: var(--paper); color: var(--ink);
-        box-shadow: 2px 3px 0 rgba(0,0,0,0.08);
+        border-color: transparent; background: linear-gradient(135deg, var(--red-dark), var(--red-mid)); color: var(--white);
+        box-shadow: 0 4px 14px rgba(200,16,46,0.3);
     }
     .sk-mode-tab .mode-icon { font-size: 15px; }
 
     /* Password modal for unlocking Manual mode */
     .sk-modal-overlay {
-        position: fixed; inset: 0; background: rgba(26,26,46,0.55); z-index: 200;
+        position: fixed; inset: 0; background: rgba(60,0,10,0.45); backdrop-filter: blur(4px); z-index: 200;
         display: none; align-items: center; justify-content: center;
     }
     .sk-modal-overlay.show { display: flex; }
     .sk-modal {
-        background: var(--paper); border: 1px solid var(--rule); border-radius: 6px; padding: 26px 28px;
-        width: 320px; max-width: 90vw; box-shadow: 4px 5px 0 rgba(0,0,0,0.2);
+        background: var(--white); border: 1px solid var(--gray-200); border-radius: 16px; padding: 26px 28px;
+        width: 320px; max-width: 90vw; box-shadow: var(--shadow-lg);
     }
     .sk-modal-title {
-        font-family: var(--mono); font-size: 12px; letter-spacing: 1px; color: var(--ink);
+        font-family: var(--font-body); font-size: 0.85rem; font-weight: 500; color: var(--gray-900);
         margin-bottom: 14px; line-height: 1.5;
     }
     .sk-modal-input {
-        width: 100%; background: transparent; border: none; border-bottom: 1.5px solid var(--rule);
-        padding: 8px 0; font-family: var(--mono); font-size: 14px; color: var(--ink); outline: none;
+        width: 100%; background: var(--white); border: 1.5px solid var(--gray-200); border-radius: 10px;
+        min-height: 44px; padding: 10px 14px; font-family: var(--font-body); font-size: 14px; color: var(--gray-900); outline: none;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
     }
-    .sk-modal-input:focus { border-bottom-color: var(--ink); }
-    .sk-modal-error { font-family: var(--mono); font-size: 11px; color: var(--stamp); margin-top: 8px; display: none; }
+    .sk-modal-input:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(200,16,46,0.1); }
+    .sk-modal-error { font-family: var(--font-body); font-size: 0.75rem; font-weight: 600; color: var(--danger); margin-top: 8px; display: none; }
     .sk-modal-error.show { display: block; }
 
     /* Generated serial output */
     .snl-serial-list {
-        background: var(--ink); color: #7ecfa0; font-family: var(--mono); font-size: 12.5px;
-        line-height: 1.9; padding: 16px 18px; border-radius: 3px; max-height: 260px; overflow-y: auto;
+        background: var(--gray-900); color: #86efac; font-family: 'SFMono-Regular', Consolas, monospace; font-size: 12.5px;
+        line-height: 1.9; padding: 16px 18px; border-radius: 12px; max-height: 260px; overflow-y: auto;
     }
     .snl-serial-list div { display: flex; justify-content: space-between; gap: 12px; }
-    .snl-serial-list .idx { color: #5a8f78; }
+    .snl-serial-list .idx { color: #4ade80; opacity: 0.7; }
 
     @@media (max-width: 860px) {
         .snl-layout { flex-direction: column; }
@@ -210,18 +274,18 @@
     .sk-lang-switch {
         position: fixed; top: 18px; right: 22px; z-index: 100;
         display: flex; gap: 8px;
-        background: var(--paper); border: 1px solid var(--rule); border-radius: 20px;
-        padding: 5px 6px; box-shadow: 2px 3px 0 rgba(0,0,0,0.08);
+        background: var(--white); border: 1px solid var(--gray-200); border-radius: 20px;
+        padding: 5px 6px; box-shadow: var(--shadow-sm);
     }
     .sk-lang-flag {
         width: 26px; height: 26px; border-radius: 50%; overflow: hidden;
         border: 1.5px solid transparent; padding: 0; cursor: pointer; background: none;
         display: flex; align-items: center; justify-content: center;
-        opacity: 0.5; transition: opacity 0.15s, border-color 0.15s, transform 0.15s;
+        opacity: 0.5; transition: opacity 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
     }
     .sk-lang-flag img { width: 100%; height: 100%; object-fit: cover; display: block; }
     .sk-lang-flag:hover { opacity: 0.85; transform: translateY(-1px); }
-    .sk-lang-flag.active { opacity: 1; border-color: var(--ink); box-shadow: 0 0 0 2px rgba(26,26,46,0.08); }
+    .sk-lang-flag.active { opacity: 1; border-color: var(--red); box-shadow: 0 0 0 2px rgba(200,16,46,0.12); }
 
     @@media (max-width: 560px) {
         .sk-lang-switch { top: 12px; right: 12px; padding: 4px 5px; gap: 6px; }
@@ -237,6 +301,7 @@
         <div>
             <h1 data-i18n="snlabel.title">SN LABEL PRINT</h1>
             <p data-i18n="snlabel.subtitle">Serial Number Print — Sakura</p>
+            <span class="accent-bar"></span>
         </div>
         <div class="snl-badge">SAKURA</div>
     </header>
