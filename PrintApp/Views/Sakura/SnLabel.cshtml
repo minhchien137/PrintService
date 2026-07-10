@@ -98,7 +98,8 @@
     .t-btn-primary:hover:not(:disabled) { transform: translate(-1px,-1px); box-shadow: 4px 4px 0 rgba(0,0,0,0.18); }
     .t-btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
     .t-btn-outline { background: transparent; color: var(--ink); border: 1.5px solid var(--ink); box-shadow: 2px 2px 0 rgba(0,0,0,0.1); }
-    .t-btn-outline:hover { background: var(--ink); color: var(--paper); }
+    .t-btn-outline:hover:not(:disabled) { background: var(--ink); color: var(--paper); }
+    .t-btn-outline:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
     .t-btn-ghost { background: transparent; color: var(--ghost); border: 1.5px solid var(--rule); }
     .t-btn-ghost:hover { border-color: var(--ink); color: var(--ink); }
 
@@ -254,8 +255,8 @@
                         <span data-i18n="snlabel.modeWorkOrder">Work Order</span>
                     </button>
                     <button type="button" class="sk-mode-tab" data-mode="manual">
-                        <span class="mode-icon">🔧</span>
-                        <span data-i18n="snlabel.modeManual">Manual</span>
+                        <span class="mode-icon">🔁</span>
+                        <span data-i18n="snlabel.modeManual">Reprint</span>
                     </button>
                 </div>
 
@@ -287,7 +288,7 @@
                 </div>
             </div>
 
-            <div class="t-section">
+            <div class="t-section" id="printParamsSection">
                 <div class="t-section-label" data-i18n="snlabel.printParams">Print Parameters</div>
 
                 <div class="t-grid t-grid-2">
@@ -327,6 +328,7 @@
                     <button class="t-btn t-btn-ghost" id="btnRefresh" data-i18n="snlabel.refreshBtn">↻ Refresh</button>
                 </div>
 
+                <div id="printerHint" class="t-status"></div>
                 <div id="printStatus" class="t-status"></div>
             </div>
 
@@ -534,6 +536,8 @@
     const $btnRefreshUsb = document.getElementById('btnRefreshUsb');
 
     let printMode = 'tcp';
+    let bridgeOnline = false;
+    const $printerHint = document.getElementById('printerHint');
 
     // ── Print mode: Work Order (default) vs Manual (password-gated every time) ──
     const $modeTabs   = document.getElementById('modeTabs');
@@ -556,6 +560,17 @@
     const $reprintSerial  = document.getElementById('reprintSerial');
     const $btnReprint     = document.getElementById('btnReprint');
     const $reprintStatus  = document.getElementById('reprintStatus');
+    const $printParamsSection = document.getElementById('printParamsSection');
+
+    // Tạm ẩn chế độ in thủ công (nhập tay Color/Quantity rồi PRINT) — chỉ giữ lại
+    // Reprint by Serial trong tab này. Cần bật lại thì đổi true là đủ, không phải
+    // sửa lại HTML/JS gì khác.
+    const MANUAL_PRINT_ENABLED = false;
+
+    // Tạm bỏ bước xác nhận mật khẩu khi chuyển sang tab Reprint (chỉ còn Reprint
+    // by Serial nên bớt phiền). Modal + API /verify-manual-password vẫn giữ
+    // nguyên — cần bật lại gate thì đổi true là đủ.
+    const MANUAL_PW_GATE_ENABLED = false;
 
     let entryMode = 'wo'; // always defaults to Work Order on page load
     let woResolvedOk = false;
@@ -589,8 +604,31 @@
     }
 
     // ── Print mode switching ──────────────────────────────────────────────────
+
+    // "Đã kết nối máy in" ở đây nghĩa là: Local Bridge đang online VÀ đã chọn/điền
+    // đúng máy in cho chế độ hiện tại (IP cho TCP, hoặc 1 máy USB đã chọn) — trình
+    // duyệt không tự mở được socket để kiểm tra thật sự có bắt tay được với máy in
+    // hay không, việc đó do Local Bridge (agent chạy trên máy operator) đảm nhiệm.
+    function isPrinterConfigured() {
+        return printMode === 'usb' ? !!$usbSelect.value : !!$printerIp.value.trim();
+    }
+
+    function updatePrinterHint(printerReady) {
+        if (printerReady) {
+            $printerHint.className = 't-status';
+            return;
+        }
+        const msg = !bridgeOnline
+            ? t('snlabel.printerServiceOffline', 'Print Service is offline — cannot print.')
+            : t('snlabel.printerNotConnected', 'No printer connected — select a printer in Printer Configuration first.');
+        showStatus($printerHint, `✗ ${msg}`, 'err');
+    }
+
     function updatePrintButtonState() {
-        $btnPrint.disabled = entryMode === 'wo' && !woResolvedOk;
+        const printerReady = bridgeOnline && isPrinterConfigured();
+        updatePrinterHint(printerReady);
+        $btnPrint.disabled = (entryMode === 'wo' && !woResolvedOk) || !printerReady;
+        $btnReprint.disabled = !printerReady;
     }
 
     function setMode(mode) {
@@ -598,6 +636,7 @@
         document.querySelectorAll('.sk-mode-tab').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
         $woPanel.style.display = mode === 'wo' ? '' : 'none';
         $reprintSection.style.display = mode === 'manual' ? '' : 'none';
+        $printParamsSection.style.display = (mode === 'wo' || MANUAL_PRINT_ENABLED) ? '' : 'none';
         // Color luôn khóa ở tab Work Order (đến từ Odoo); Quantity thì cho sửa —
         // để người dùng có thể in ít hơn tổng số lượng WO (vd in trước 100/3000 hôm nay).
         $variant.disabled = mode === 'wo';
@@ -617,7 +656,7 @@
 
         // Manual mode always requires the password again, every time it's entered —
         // no "remember me" for this gate.
-        if (mode === 'manual') {
+        if (mode === 'manual' && MANUAL_PW_GATE_ENABLED) {
             openPasswordModal();
             return;
         }
@@ -742,6 +781,17 @@
             return;
         }
 
+        // Same guard as PRINT — reprint must not proceed if the bridge is offline
+        // or no printer is selected, even if this was triggered via Enter keypress
+        // (which bypasses the disabled state on $btnReprint).
+        if (!bridgeOnline || !isPrinterConfigured()) {
+            const msg = !bridgeOnline
+                ? t('snlabel.printerServiceOffline', 'Print Service is offline — cannot print.')
+                : t('snlabel.printerNotConnected', 'No printer connected — select a printer in Printer Configuration first.');
+            showStatus($reprintStatus, `✗ ${msg}`, 'err');
+            return;
+        }
+
         $btnReprint.disabled = true;
         try {
             const res = await fetch(`${BASE}/api/sakura/snlabel/reprint?serialNumber=${encodeURIComponent(sn)}`);
@@ -750,7 +800,7 @@
 
             const zpl = body.data.zpl;
             const copies = parseInt($copies.value) || 1;
-            let msg = `✓ ${body.data.serialNumber} (${body.data.color}).`;
+            let msg = `✓ ${body.data.serialNumber} (${body.data.color}) — ${t('snlabel.reprintCountLabel', 'reprinted')} ×${body.data.reprintCount}.`;
             let statusType = 'ok';
 
             if (printMode === 'usb') {
@@ -838,7 +888,11 @@
         $usbBlock.style.display = mode === 'usb' ? '' : 'none';
         localStorage.setItem(LS.mode, mode);
         if (mode === 'usb' && $usbSelect.options.length <= 1) loadUsbPrinters();
+        updatePrintButtonState();
     }
+
+    $printerIp.addEventListener('input', updatePrintButtonState);
+    $usbSelect.addEventListener('change', updatePrintButtonState);
 
     $lblTcp.addEventListener('click', () => setPrintMode('tcp'));
     $lblUsb.addEventListener('click', () => setPrintMode('usb'));
@@ -881,11 +935,15 @@
             if (r.ok) {
                 $nodeDot.className = 'node-dot alive';
                 $nodeTxt.textContent = 'Service — Online';
+                bridgeOnline = true;
+                updatePrintButtonState();
                 return;
             }
         } catch { /* offline */ }
         $nodeDot.className = 'node-dot dead';
         $nodeTxt.textContent = 'Service — Offline';
+        bridgeOnline = false;
+        updatePrintButtonState();
     }
     checkNode();
     setInterval(checkNode, 8000);

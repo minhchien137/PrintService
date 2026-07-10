@@ -47,6 +47,15 @@ public class SnLabelPrint
 
     [StringLength(50)]
     public string? WorkOrder { get; set; }
+
+    // Reprint by Serial (Manual mode) cập nhật 3 cột này trên chính dòng gốc —
+    // không tạo dòng mới, không đụng tới RunningNumber — chỉ để đánh dấu/kiểm soát
+    // tem nào đã bị in lại.
+    public int ReprintCount { get; set; }
+    public DateTime? LastReprintedAt { get; set; }
+
+    [StringLength(100)]
+    public string? LastReprintedBy { get; set; }
 }
 
 // ── Request / response DTOs ──────────────────────────────────────────────────
@@ -131,6 +140,8 @@ public class SnLabelHistoryItemDto
     public string? PrintedBy { get; set; }
     public Guid BatchId { get; set; }
     public string? WorkOrder { get; set; }
+    public int ReprintCount { get; set; }
+    public DateTime? LastReprintedAt { get; set; }
 }
 
 public class SnLabelHistoryPageDto

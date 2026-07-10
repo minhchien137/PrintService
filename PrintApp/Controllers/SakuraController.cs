@@ -293,7 +293,9 @@ public class SakuraController : Controller
         if (string.IsNullOrWhiteSpace(serialNumber))
             return BadRequest(new { ok = false, error = "Thiếu Serial Number.", errorCode = "reprint.missingSerial" });
 
-        var row = await _snLabel.FindBySerialAsync(serialNumber);
+        // Đánh dấu reprint ngay trên dòng gốc (tăng ReprintCount, ghi lại thời điểm) —
+        // không tạo dòng mới nên không đụng tới bộ đếm RunningNumber.
+        var row = await _snLabel.MarkReprintedAsync(serialNumber, reprintedBy: null);
         if (row == null)
         {
             string sn = serialNumber.Trim();
@@ -315,6 +317,7 @@ public class SakuraController : Controller
                 row.ProductionDate,
                 row.WorkOrder,
                 row.PrintedAt,
+                row.ReprintCount,
                 zpl
             }
         });

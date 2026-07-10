@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("PrintApp")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+6fe65e81e8c70613d4a1ed342099396db28d65ab")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+0ac879a7b1529c02f43fd69a3422ede322a4c4c4")]
 [assembly: System.Reflection.AssemblyProductAttribute("PrintApp")]
 [assembly: System.Reflection.AssemblyTitleAttribute("PrintApp")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

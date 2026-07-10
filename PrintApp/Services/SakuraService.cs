@@ -340,7 +340,9 @@ public class SakuraService
                 PrintedAt = x.PrintedAt,
                 PrintedBy = x.PrintedBy,
                 BatchId = x.BatchId,
-                WorkOrder = x.WorkOrder
+                WorkOrder = x.WorkOrder,
+                ReprintCount = x.ReprintCount,
+                LastReprintedAt = x.LastReprintedAt
             })
             .ToListAsync();
 
@@ -384,11 +386,18 @@ public class SakuraService
     }
 
     // ── Reprint by Serial (Manual mode) — re-emit ZPL for an already-printed serial ──
-    public async Task<SnLabelPrint?> FindBySerialAsync(string serialNumber)
+    // Đánh dấu reprint ngay trên dòng gốc (không tạo dòng mới, không đụng RunningNumber) —
+    // để trang History biết serial nào đã bị in lại, in lại mấy lần, lần gần nhất khi nào.
+    public async Task<SnLabelPrint?> MarkReprintedAsync(string serialNumber, string? reprintedBy)
     {
-        return await _context.SnLabelPrints
-            .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.SerialNumber == serialNumber.Trim());
+        var row = await _context.SnLabelPrints.FirstOrDefaultAsync(x => x.SerialNumber == serialNumber.Trim());
+        if (row == null) return null;
+
+        row.ReprintCount += 1;
+        row.LastReprintedAt = VietnamNow();
+        row.LastReprintedBy = reprintedBy;
+        await _context.SaveChangesAsync();
+        return row;
     }
 
     // ── ZPL templates (stored in DB — SM_Sakura_ZplTemplate) ─────────────────

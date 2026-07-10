@@ -87,6 +87,17 @@
     .t-table td { padding: 8px 10px; border-bottom: 1px solid var(--cream); vertical-align: middle; }
     .t-table tr:hover td { background: var(--cream); }
 
+    /* Reprinted rows — highlighted so operators can spot re-printed labels at a glance */
+    .t-table tr.reprinted td { background: rgba(184, 134, 11, 0.10); border-bottom-color: rgba(184, 134, 11, 0.25); }
+    .t-table tr.reprinted:hover td { background: rgba(184, 134, 11, 0.18); }
+    .reprint-badge {
+        display: inline-flex; align-items: center; gap: 3px; margin-left: 8px;
+        font-family: var(--mono); font-size: 9.5px; font-weight: 700; letter-spacing: 0.3px;
+        color: #8a5a00; background: rgba(184, 134, 11, 0.16);
+        border: 1px solid rgba(184, 134, 11, 0.4);
+        padding: 1px 7px; border-radius: 10px; white-space: nowrap;
+    }
+
     .swatch-dot {
         width: 13px; height: 13px; border-radius: 50%; flex-shrink: 0; display: inline-block;
         vertical-align: middle; margin-right: 6px;
@@ -366,9 +377,16 @@
         $histRows.innerHTML = rows.map(r => {
             const meta = COLOR_META[r.variant] || { name: r.color, cls: '' };
             const printedAt = new Date(r.printedAt).toLocaleString();
+            const reprinted = r.reprintCount > 0;
+            const reprintTitle = reprinted && r.lastReprintedAt
+                ? ` title="${t('history.lastReprintedAt', 'Last reprinted')}: ${new Date(r.lastReprintedAt).toLocaleString()}"`
+                : '';
+            const reprintBadge = reprinted
+                ? `<span class="reprint-badge"${reprintTitle}>🔁 ×${r.reprintCount}</span>`
+                : '';
             return `
-                <tr>
-                    <td>${r.serialNumber}</td>
+                <tr class="${reprinted ? 'reprinted' : ''}">
+                    <td>${r.serialNumber}${reprintBadge}</td>
                     <td><span class="swatch-dot ${meta.cls}"></span>${meta.name}</td>
                     <td>${lineLabel(r.productionLine)}</td>
                     <td>${r.workOrder || '—'}</td>
