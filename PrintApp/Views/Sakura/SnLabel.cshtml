@@ -343,6 +343,7 @@
                         <button type="button" class="t-btn t-btn-outline" id="btnReprint" data-i18n="snlabel.reprintBtn">🔁 Reprint</button>
                     </div>
                 </div>
+                <div id="reprintHint" class="t-status"></div>
                 <div id="reprintStatus" class="t-status"></div>
             </div>
 
@@ -560,6 +561,7 @@
     const $reprintSerial  = document.getElementById('reprintSerial');
     const $btnReprint     = document.getElementById('btnReprint');
     const $reprintStatus  = document.getElementById('reprintStatus');
+    const $reprintHint    = document.getElementById('reprintHint');
     const $printParamsSection = document.getElementById('printParamsSection');
 
     // Tạm ẩn chế độ in thủ công (nhập tay Color/Quantity rồi PRINT) — chỉ giữ lại
@@ -613,15 +615,24 @@
         return printMode === 'usb' ? !!$usbSelect.value : !!$printerIp.value.trim();
     }
 
+    function printerNotReadyMessage() {
+        return !bridgeOnline
+            ? t('snlabel.printerServiceOffline', 'Print Service is offline — cannot print.')
+            : t('snlabel.printerNotConnected', 'No printer connected — select a printer in Printer Configuration first.');
+    }
+
     function updatePrinterHint(printerReady) {
         if (printerReady) {
             $printerHint.className = 't-status';
+            $reprintHint.className = 't-status';
             return;
         }
-        const msg = !bridgeOnline
-            ? t('snlabel.printerServiceOffline', 'Print Service is offline — cannot print.')
-            : t('snlabel.printerNotConnected', 'No printer connected — select a printer in Printer Configuration first.');
+        const msg = printerNotReadyMessage();
+        // $printerHint sits inside Print Parameters, which is hidden while the
+        // manual/reprint tab is active — mirror the same hint into $reprintHint
+        // (inside the Reprint section) so it's still visible there.
         showStatus($printerHint, `✗ ${msg}`, 'err');
+        showStatus($reprintHint, `✗ ${msg}`, 'err');
     }
 
     function updatePrintButtonState() {
@@ -785,10 +796,7 @@
         // or no printer is selected, even if this was triggered via Enter keypress
         // (which bypasses the disabled state on $btnReprint).
         if (!bridgeOnline || !isPrinterConfigured()) {
-            const msg = !bridgeOnline
-                ? t('snlabel.printerServiceOffline', 'Print Service is offline — cannot print.')
-                : t('snlabel.printerNotConnected', 'No printer connected — select a printer in Printer Configuration first.');
-            showStatus($reprintStatus, `✗ ${msg}`, 'err');
+            showStatus($reprintStatus, `✗ ${printerNotReadyMessage()}`, 'err');
             return;
         }
 

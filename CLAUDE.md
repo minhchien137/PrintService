@@ -20,7 +20,7 @@ There are no automated tests in this project.
 
 ## Architecture
 
-ASP.NET Core 8 MVC app (`RootNamespace: ZplPrinter`) that generates ZPL label data and coordinates printing to Zebra printers. The app is served under the path base `/quangprint`.
+ASP.NET Core 8 MVC app (`RootNamespace: ZplPrinter`) that generates ZPL label data and coordinates printing to Zebra printers. The app is served under the path base `/print`.
 
 ### Print flow
 

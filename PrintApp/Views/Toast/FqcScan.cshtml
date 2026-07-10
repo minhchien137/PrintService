@@ -438,7 +438,7 @@
 
 <script>
     (function () {
-        // PathBase fix — hoạt động đúng cả khi deploy dưới /quangprint hay root
+        // PathBase fix — hoạt động đúng cả khi deploy dưới /print hay root
         const BASE = '@Url.Content("~")'.replace(/\/$/, '');
 
         const zplTemplate = @Html.Raw(Json.Serialize(Model.ZPL_Temp ?? ""));

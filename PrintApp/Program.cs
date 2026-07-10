@@ -28,10 +28,10 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseForwardedHeaders();
-app.UsePathBase("/quangprint");
+app.UsePathBase("/print");
 app.Use((context, next) =>
 {
-    context.Request.PathBase = "/quangprint";
+    context.Request.PathBase = "/print";
     return next();
 });
 app.UseStaticFiles();
