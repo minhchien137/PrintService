@@ -13,12 +13,25 @@ public class SakuraController : Controller
     private readonly SakuraService _snLabel;
     private readonly IConfiguration _config;
     private readonly AppDbContext _db;
+    private readonly ViidooService _viidoo;
 
-    public SakuraController(SakuraService snLabel, IConfiguration config, AppDbContext db)
+    public SakuraController(SakuraService snLabel, IConfiguration config, AppDbContext db, ViidooService viidoo)
     {
         _snLabel = snLabel;
         _config = config;
         _db = db;
+        _viidoo = viidoo;
+    }
+
+    // Gói 1 exception thành JSON lỗi có errorCode/errorParams (nếu có) để front-end tự
+    // dịch theo EN/ZH đang chọn (xem sakura-i18n.js -> translateApiError). Exception
+    // không có mã (vd lỗi .NET/network chung chung) vẫn được dịch qua mã dùng chung
+    // "common.unexpectedError", kèm message gốc làm tham số.
+    private static object BuildError(Exception ex)
+    {
+        if (ex is ISakuraCodedException coded)
+            return new { ok = false, error = ex.Message, errorCode = coded.Code, errorParams = coded.Params };
+        return new { ok = false, error = ex.Message, errorCode = "common.unexpectedError", errorParams = new { message = ex.Message } };
     }
 
     // ── View ──────────────────────────────────────────────────────────────────
@@ -34,21 +47,32 @@ public class SakuraController : Controller
         {
             new SakuraAppTile
             {
-                Key = "snlabel",
+                Key = "snlabelgroup",
                 Icon = "🏷️",
-                Title = "SN Label Print",
-                Subtitle = "Print serial number labels",
-                Href = Url.Content("~/sakura/snlabel"),
-                Enabled = true
-            },
-            new SakuraAppTile
-            {
-                Key = "history",
-                Icon = "🕘",
-                Title = "History",
-                Subtitle = "SN Label print history",
-                Href = Url.Content("~/sakura/snlabel/history"),
-                Enabled = true
+                Title = "SN Label",
+                Subtitle = "Serial number label printing",
+                Enabled = true,
+                Items = new List<SakuraAppTile>
+                {
+                    new SakuraAppTile
+                    {
+                        Key = "snlabel",
+                        Icon = "🖨️",
+                        Title = "Print",
+                        Subtitle = "Print serial number labels",
+                        Href = Url.Content("~/sakura/snlabel"),
+                        Enabled = true
+                    },
+                    new SakuraAppTile
+                    {
+                        Key = "history",
+                        Icon = "🕘",
+                        Title = "History",
+                        Subtitle = "SN Label print history",
+                        Href = Url.Content("~/sakura/snlabel/history"),
+                        Enabled = true
+                    }
+                }
             },
             new SakuraAppTile
             {
@@ -99,8 +123,76 @@ public class SakuraController : Controller
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(new { ok = false, error = ex.Message });
+            return BadRequest(BuildError(ex));
         }
+    }
+
+    // ── API: Work Order lookup (mode "In qua Work Order") ──────────────────────
+
+    [HttpGet("/api/sakura/snlabel/workorder-lookup")]
+    public async Task<IActionResult> WorkOrderLookup([FromQuery] string workOrder)
+    {
+        if (string.IsNullOrWhiteSpace(workOrder))
+            return BadRequest(new { ok = false, error = "Thiếu Work Order.", errorCode = "workOrder.missing" });
+
+        string wo = workOrder.Trim();
+        try
+        {
+            var result = await _viidoo.SearchAsync(wo);
+            if (result == null)
+                return BadRequest(new { ok = false, error = $"Không tìm thấy Work Order '{wo}' trên Odoo.", errorCode = "workOrder.notFoundOdoo", errorParams = new { wo } });
+
+            if (string.IsNullOrWhiteSpace(result.Color))
+                return BadRequest(new { ok = false, error = $"Không xác định được màu cho Work Order '{wo}'.", errorCode = "workOrder.colorUnknown", errorParams = new { wo } });
+
+            if (result.Quantity is not decimal qty || qty < 1)
+                return BadRequest(new { ok = false, error = $"Work Order '{wo}' không có số lượng hợp lệ.", errorCode = "workOrder.invalidQuantity", errorParams = new { wo } });
+
+            string? variant = SakuraService.TryResolveVariantFromColor(result.Color);
+            if (variant == null)
+                return BadRequest(new { ok = false, error = $"Không nhận diện được màu '{result.Color}' trả về từ Odoo.", errorCode = "workOrder.unresolvedColor", errorParams = new { color = result.Color } });
+
+            int totalQuantity = (int)qty;
+            int printedQuantity = await _snLabel.GetWorkOrderPrintedCountAsync(wo);
+            int remainingQuantity = Math.Max(0, totalQuantity - printedQuantity);
+
+            if (remainingQuantity <= 0)
+                return BadRequest(new { ok = false, error = $"Work Order '{wo}' đã in đủ số lượng ({printedQuantity}/{totalQuantity}).", errorCode = "workOrder.exhausted", errorParams = new { wo, printed = printedQuantity, total = totalQuantity } });
+
+            // Nếu WO này đã in dở, ngày sản xuất bị khóa theo lần in đầu tiên — chỉ được
+            // chọn ngày tự do khi đây là lần in đầu tiên (chưa có dòng nào trong DB).
+            DateTime? lockedDate = printedQuantity > 0
+                ? await _snLabel.GetWorkOrderProductionDateAsync(wo)
+                : null;
+
+            var response = new WorkOrderLookupResponse
+            {
+                WorkOrder = wo,
+                Variant = variant,
+                Color = SakuraService.ResolveColor(variant),
+                TotalQuantity = totalQuantity,
+                PrintedQuantity = printedQuantity,
+                RemainingQuantity = remainingQuantity,
+                LockedProductionDate = lockedDate
+            };
+            return Ok(new { ok = true, data = response });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(BuildError(ex));
+        }
+    }
+
+    // ── API: unlock Manual print mode with a shared password ────────────────────
+
+    [HttpPost("/api/sakura/snlabel/verify-manual-password")]
+    public IActionResult VerifyManualPassword([FromBody] ManualUnlockRequest req)
+    {
+        string expected = _config["Sakura:SnLabel:ManualModePassword"] ?? "";
+        if (req == null || string.IsNullOrEmpty(expected) || req.Password != expected)
+            return Unauthorized(new { ok = false, error = "Sai mật khẩu.", errorCode = "password.incorrect" });
+
+        return Ok(new { ok = true });
     }
 
     // ── API: print ────────────────────────────────────────────────────────────
@@ -109,20 +201,42 @@ public class SakuraController : Controller
     public async Task<IActionResult> Print([FromBody] SnLabelPrintRequest req)
     {
         if (req == null)
-            return BadRequest(new { ok = false, error = "Thiếu dữ liệu." });
+            return BadRequest(new { ok = false, error = "Thiếu dữ liệu.", errorCode = "common.missingData" });
+
+        // Không tin số lượng WO mà client gửi lên — tự tra lại tổng số lượng thật từ
+        // Odoo ngay lúc in, để không ai (kể cả gọi thẳng API, bỏ qua UI) có thể né
+        // giới hạn "còn lại bao nhiêu" của Work Order.
+        int? workOrderTotalQuantity = null;
+        if (!string.IsNullOrWhiteSpace(req.WorkOrder))
+        {
+            try
+            {
+                var woResult = await _viidoo.SearchAsync(req.WorkOrder.Trim());
+                if (woResult == null || woResult.Quantity is not decimal woQty || woQty < 1)
+                {
+                    string wo = req.WorkOrder.Trim();
+                    return BadRequest(new { ok = false, error = $"Không xác định được tổng số lượng của Work Order '{wo}'.", errorCode = "workOrder.totalUnavailable", errorParams = new { wo } });
+                }
+                workOrderTotalQuantity = (int)woQty;
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(BuildError(ex));
+            }
+        }
 
         List<SnLabelPrint> rows;
         try
         {
-            rows = await _snLabel.GenerateNextSerialsAsync(req.Date, req.Variant, req.Line, req.Quantity, req.PrintedBy);
+            rows = await _snLabel.GenerateNextSerialsAsync(req.Date, req.Variant, req.Line, req.Quantity, req.PrintedBy, req.WorkOrder, workOrderTotalQuantity);
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(new { ok = false, error = ex.Message });
+            return BadRequest(BuildError(ex));
         }
         catch (InvalidOperationException ex)
         {
-            return Conflict(new { ok = false, error = ex.Message });
+            return Conflict(BuildError(ex));
         }
 
         string template = await _snLabel.GetZplTemplateAsync("SnLabel");
@@ -171,12 +285,59 @@ public class SakuraController : Controller
         return Ok(response);
     }
 
+    // ── API: reprint by serial (Manual mode) ────────────────────────────────────
+
+    [HttpGet("/api/sakura/snlabel/reprint")]
+    public async Task<IActionResult> Reprint([FromQuery] string serialNumber)
+    {
+        if (string.IsNullOrWhiteSpace(serialNumber))
+            return BadRequest(new { ok = false, error = "Thiếu Serial Number.", errorCode = "reprint.missingSerial" });
+
+        // Đánh dấu reprint ngay trên dòng gốc (tăng ReprintCount, ghi lại thời điểm) —
+        // không tạo dòng mới nên không đụng tới bộ đếm RunningNumber.
+        var row = await _snLabel.MarkReprintedAsync(serialNumber, reprintedBy: null);
+        if (row == null)
+        {
+            string sn = serialNumber.Trim();
+            return NotFound(new { ok = false, error = $"Không tìm thấy serial '{sn}'.", errorCode = "reprint.notFound", errorParams = new { serial = sn } });
+        }
+
+        string template = await _snLabel.GetZplTemplateAsync("SnLabel");
+        string zpl = SakuraService.BuildConcatenatedZpl(template, new[] { row.SerialNumber });
+
+        return Ok(new
+        {
+            ok = true,
+            data = new
+            {
+                row.SerialNumber,
+                row.Variant,
+                row.Color,
+                row.ProductionLine,
+                row.ProductionDate,
+                row.WorkOrder,
+                row.PrintedAt,
+                row.ReprintCount,
+                zpl
+            }
+        });
+    }
+
     // ── API: history ──────────────────────────────────────────────────────────
 
     [HttpGet("/api/sakura/snlabel/history")]
-    public async Task<IActionResult> History([FromQuery] DateTime date)
+    public async Task<IActionResult> History([FromQuery] DateTime? date, [FromQuery] string? workOrder, [FromQuery] string? serialNumber, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
-        var list = await _snLabel.GetHistoryAsync(date);
+        var result = await _snLabel.GetHistoryAsync(date, workOrder, serialNumber, page, pageSize);
+        return Ok(new { ok = true, data = result });
+    }
+
+    // Danh sách Work Order để đổ vào dropdown filter — nếu có ngày thì chỉ lấy WO của
+    // đúng ngày đó (vd ngày 9 có 3 WO thì dropdown chỉ hiện đúng 3 WO đó).
+    [HttpGet("/api/sakura/snlabel/workorders")]
+    public async Task<IActionResult> GetWorkOrders([FromQuery] DateTime? date)
+    {
+        var list = await _snLabel.GetWorkOrdersAsync(date);
         return Ok(new { ok = true, data = list });
     }
 

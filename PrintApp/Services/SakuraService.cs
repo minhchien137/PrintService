@@ -17,6 +17,11 @@ public class SakuraService
     // Model hiện tại luôn là RM15A — để hằng số cho dễ đổi sau này.
     public const string Model = "RM15A";
 
+    // Giới hạn số lượng in mỗi lần. Nhập thủ công giữ mức thấp để tránh gõ nhầm;
+    // in theo Work Order tin tưởng số liệu từ Odoo nên cho phép cao hơn.
+    public const int ManualMaxQuantity = 500;
+    public const int WorkOrderMaxQuantity = 5000;
+
     private const string Base34Alphabet = "0123456789ABCDEFGHJKLMNPQRSTUVWXYZ"; // không có O, I
     private const int Base34 = 34;
     public const int MaxRunningNumberInt = Base34 * Base34 * Base34 - 1; // "ZZZ" = 39303
@@ -72,7 +77,22 @@ public class SakuraService
     }
 
     public static string ResolveColor(string variant) =>
-        VariantColorMap.TryGetValue(variant, out var color) ? color : throw new ArgumentException($"Variant không hợp lệ: {variant}");
+        VariantColorMap.TryGetValue(variant, out var color) ? color
+            : throw new SakuraValidationException("common.invalidVariant", $"Variant không hợp lệ: {variant}", new { variant });
+
+    // Chấp nhận cả tên màu (không phân biệt hoa/thường) lẫn mã variant ("00"/"01"/"02")
+    // vì chưa biết API Work Order thật sẽ trả về dạng nào.
+    public static string? TryResolveVariantFromColor(string colorOrVariant)
+    {
+        if (string.IsNullOrWhiteSpace(colorOrVariant)) return null;
+        string s = colorOrVariant.Trim();
+
+        var byVariant = Variants.FirstOrDefault(v => string.Equals(v.Variant, s, StringComparison.OrdinalIgnoreCase));
+        if (byVariant.Variant != null) return byVariant.Variant;
+
+        var byColor = Variants.FirstOrDefault(v => string.Equals(v.Color, s, StringComparison.OrdinalIgnoreCase));
+        return byColor.Variant;
+    }
 
     // ── Serial number formatting ─────────────────────────────────────────────
 
@@ -88,12 +108,14 @@ public class SakuraService
     // ── SN Label generation (concurrency-safe) ───────────────────────────────
 
     public async Task<List<SnLabelPrint>> GenerateNextSerialsAsync(
-        DateTime date, string variant, string line, int quantity, string? printedBy)
+        DateTime date, string variant, string line, int quantity, string? printedBy,
+        string? workOrder = null, int? workOrderTotalQuantity = null)
     {
-        if (quantity < 1 || quantity > 500)
-            throw new ArgumentOutOfRangeException(nameof(quantity), "Số lượng phải từ 1 đến 500.");
+        int maxQuantity = string.IsNullOrWhiteSpace(workOrder) ? ManualMaxQuantity : WorkOrderMaxQuantity;
+        if (quantity < 1 || quantity > maxQuantity)
+            throw new SakuraValidationException("print.invalidQuantity", $"Số lượng phải từ 1 đến {maxQuantity}.", new { max = maxQuantity });
         if (line != "0" && line != "1")
-            throw new ArgumentException("Line không hợp lệ (chỉ 0 hoặc 1).", nameof(line));
+            throw new SakuraValidationException("print.invalidLine", "Line không hợp lệ (chỉ 0 hoặc 1).");
 
         string color = ResolveColor(variant); // throws if invalid
         DateTime prodDate = date.Date;
@@ -104,6 +126,39 @@ public class SakuraService
             await using var tx = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
             try
             {
+                // Khóa ngày sản xuất theo lần in ĐẦU TIÊN của Work Order này — bất kể ngày
+                // hiện tại trên form là gì, để toàn bộ nhãn cùng 1 WO luôn dùng chung 1 ngày
+                // (vd in 2000/3000 ngày 8/7, hôm sau in tiếp 1000 còn lại vẫn phải ra ngày 8/7).
+                if (!string.IsNullOrWhiteSpace(workOrder))
+                {
+                    var existingDate = await _context.SnLabelPrints
+                        .Where(x => x.WorkOrder == workOrder)
+                        .OrderBy(x => x.PrintedAt)
+                        .Select(x => (DateTime?)x.ProductionDate)
+                        .FirstOrDefaultAsync();
+                    if (existingDate is DateTime lockedDate)
+                        prodDate = lockedDate;
+                }
+
+                // Re-check "còn lại bao nhiêu" ngay trong transaction — phòng trường hợp
+                // người khác đã in thêm cho cùng Work Order này sau khi lookup nhưng
+                // trước khi bấm PRINT (vd 2 máy cùng thao tác 1 WO).
+                if (!string.IsNullOrWhiteSpace(workOrder) && workOrderTotalQuantity is int totalQty)
+                {
+                    int alreadyPrinted = await _context.SnLabelPrints
+                        .Where(x => x.WorkOrder == workOrder)
+                        .CountAsync();
+                    int woRemaining = totalQty - alreadyPrinted;
+                    if (quantity > woRemaining)
+                    {
+                        int clampedRemaining = Math.Max(0, woRemaining);
+                        throw new SakuraConflictException(
+                            "print.workOrderQuantityExceeded",
+                            $"Work Order '{workOrder}' chỉ còn {clampedRemaining} trên tổng {totalQty} có thể in (đã in {alreadyPrinted}).",
+                            new { wo = workOrder, remaining = clampedRemaining, total = totalQty, printed = alreadyPrinted });
+                    }
+                }
+
                 int lastRunning = await _context.SnLabelPrints
                     .Where(x => x.ProductionDate == prodDate && x.ProductionLine == line && x.Variant == variant)
                     .Select(x => (int?)x.RunningNumberInt)
@@ -113,9 +168,11 @@ public class SakuraService
                 if (startRunning + quantity - 1 > MaxRunningNumberInt)
                 {
                     int remaining = Math.Max(0, MaxRunningNumberInt - startRunning + 1);
-                    throw new InvalidOperationException(
+                    throw new SakuraConflictException(
+                        "print.serialCapacityExceeded",
                         $"Không thể sinh serial: số thứ tự sẽ vượt quá ZZZ ({MaxRunningNumberInt}). " +
-                        $"Chỉ còn {remaining} serial khả dụng cho {color} / Line {line} / {prodDate:yyyy-MM-dd}.");
+                        $"Chỉ còn {remaining} serial khả dụng cho {color} / Line {line} / {prodDate:yyyy-MM-dd}.",
+                        new { max = MaxRunningNumberInt, remaining, color, line, date = prodDate.ToString("yyyy-MM-dd") });
                 }
 
                 var batchId = Guid.NewGuid();
@@ -140,7 +197,8 @@ public class SakuraService
                         RunningNumberInt = runningInt,
                         PrintedAt = printedAt,
                         PrintedBy = printedBy,
-                        BatchId = batchId
+                        BatchId = batchId,
+                        WorkOrder = workOrder
                     });
                 }
 
@@ -162,11 +220,32 @@ public class SakuraService
             }
         }
 
-        throw new InvalidOperationException("Không thể sinh serial do tranh chấp đồng thời quá nhiều lần, vui lòng thử lại.");
+        throw new SakuraConflictException("print.concurrencyFailed", "Không thể sinh serial do tranh chấp đồng thời quá nhiều lần, vui lòng thử lại.");
     }
 
     private static bool IsUniqueViolation(DbUpdateException ex) =>
         ex.InnerException is SqlException sqlEx && (sqlEx.Number == 2601 || sqlEx.Number == 2627);
+
+    // Tổng số label đã in cho 1 Work Order (không phân biệt ngày/line — cộng dồn
+    // qua nhiều lượt in khác nhau). Dùng để tính "còn lại bao nhiêu" khi lookup.
+    public async Task<int> GetWorkOrderPrintedCountAsync(string workOrder)
+    {
+        return await _context.SnLabelPrints
+            .AsNoTracking()
+            .CountAsync(x => x.WorkOrder == workOrder);
+    }
+
+    // Ngày sản xuất của lần in đầu tiên cho Work Order này (null nếu chưa in lần nào).
+    // Dùng để hiển thị/khóa ô ngày trên form khi lookup lại 1 WO đã in dở.
+    public async Task<DateTime?> GetWorkOrderProductionDateAsync(string workOrder)
+    {
+        return await _context.SnLabelPrints
+            .AsNoTracking()
+            .Where(x => x.WorkOrder == workOrder)
+            .OrderBy(x => x.PrintedAt)
+            .Select(x => (DateTime?)x.ProductionDate)
+            .FirstOrDefaultAsync();
+    }
 
     // ── Status / summary ──────────────────────────────────────────────────────
 
@@ -218,13 +297,39 @@ public class SakuraService
 
     // ── History ───────────────────────────────────────────────────────────────
 
-    public async Task<List<SnLabelHistoryItemDto>> GetHistoryAsync(DateTime date)
+    public async Task<SnLabelHistoryPageDto> GetHistoryAsync(DateTime? date, string? workOrder, string? serialNumber, int page, int pageSize)
     {
-        DateTime prodDate = date.Date;
-        return await _context.SnLabelPrints
-            .AsNoTracking()
-            .Where(x => x.ProductionDate == prodDate)
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 200);
+
+        var query = _context.SnLabelPrints.AsNoTracking().AsQueryable();
+
+        if (date.HasValue)
+        {
+            DateTime prodDate = date.Value.Date;
+            query = query.Where(x => x.ProductionDate == prodDate);
+        }
+
+        // Chọn từ dropdown (chỉ liệt kê các WO đã có sẵn trong DB) nên khớp chính xác,
+        // không cần "chứa" như trước.
+        if (!string.IsNullOrWhiteSpace(workOrder))
+        {
+            string wo = workOrder.Trim();
+            query = query.Where(x => x.WorkOrder == wo);
+        }
+
+        if (!string.IsNullOrWhiteSpace(serialNumber))
+        {
+            string sn = serialNumber.Trim();
+            query = query.Where(x => x.SerialNumber.Contains(sn));
+        }
+
+        int totalCount = await query.CountAsync();
+
+        var items = await query
             .OrderByDescending(x => x.PrintedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(x => new SnLabelHistoryItemDto
             {
                 Id = x.Id,
@@ -234,8 +339,40 @@ public class SakuraService
                 ProductionLine = x.ProductionLine,
                 PrintedAt = x.PrintedAt,
                 PrintedBy = x.PrintedBy,
-                BatchId = x.BatchId
+                BatchId = x.BatchId,
+                WorkOrder = x.WorkOrder,
+                ReprintCount = x.ReprintCount,
+                LastReprintedAt = x.LastReprintedAt
             })
+            .ToListAsync();
+
+        return new SnLabelHistoryPageDto
+        {
+            Items = items,
+            TotalCount = totalCount,
+            Page = page,
+            PageSize = pageSize
+        };
+    }
+
+    // Danh sách Work Order khác nhau đã in — nếu có ngày thì chỉ lấy WO của ngày đó
+    // (dùng để đổ vào dropdown filter Work Order trên trang History).
+    public async Task<List<string>> GetWorkOrdersAsync(DateTime? date)
+    {
+        var query = _context.SnLabelPrints
+            .AsNoTracking()
+            .Where(x => x.WorkOrder != null && x.WorkOrder != "");
+
+        if (date.HasValue)
+        {
+            DateTime prodDate = date.Value.Date;
+            query = query.Where(x => x.ProductionDate == prodDate);
+        }
+
+        return await query
+            .Select(x => x.WorkOrder!)
+            .Distinct()
+            .OrderBy(x => x)
             .ToListAsync();
     }
 
@@ -246,6 +383,21 @@ public class SakuraService
             .Where(x => x.BatchId == batchId)
             .OrderBy(x => x.RunningNumberInt)
             .ToListAsync();
+    }
+
+    // ── Reprint by Serial (Manual mode) — re-emit ZPL for an already-printed serial ──
+    // Đánh dấu reprint ngay trên dòng gốc (không tạo dòng mới, không đụng RunningNumber) —
+    // để trang History biết serial nào đã bị in lại, in lại mấy lần, lần gần nhất khi nào.
+    public async Task<SnLabelPrint?> MarkReprintedAsync(string serialNumber, string? reprintedBy)
+    {
+        var row = await _context.SnLabelPrints.FirstOrDefaultAsync(x => x.SerialNumber == serialNumber.Trim());
+        if (row == null) return null;
+
+        row.ReprintCount += 1;
+        row.LastReprintedAt = VietnamNow();
+        row.LastReprintedBy = reprintedBy;
+        await _context.SaveChangesAsync();
+        return row;
     }
 
     // ── ZPL templates (stored in DB — SM_Sakura_ZplTemplate) ─────────────────

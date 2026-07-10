@@ -44,6 +44,18 @@ public class SnLabelPrint
     public string? PrintedBy { get; set; }
 
     public Guid BatchId { get; set; }
+
+    [StringLength(50)]
+    public string? WorkOrder { get; set; }
+
+    // Reprint by Serial (Manual mode) cập nhật 3 cột này trên chính dòng gốc —
+    // không tạo dòng mới, không đụng tới RunningNumber — chỉ để đánh dấu/kiểm soát
+    // tem nào đã bị in lại.
+    public int ReprintCount { get; set; }
+    public DateTime? LastReprintedAt { get; set; }
+
+    [StringLength(100)]
+    public string? LastReprintedBy { get; set; }
 }
 
 // ── Request / response DTOs ──────────────────────────────────────────────────
@@ -55,6 +67,27 @@ public class SnLabelPrintRequest
     public string Line { get; set; } = "";
     public int Quantity { get; set; } = 1;
     public string? PrintedBy { get; set; }
+    public string? WorkOrder { get; set; }
+}
+
+public class WorkOrderLookupResponse
+{
+    public string WorkOrder { get; set; } = "";
+    public string Variant { get; set; } = "";
+    public string Color { get; set; } = "";
+    public int TotalQuantity { get; set; }
+    public int PrintedQuantity { get; set; }
+    public int RemainingQuantity { get; set; }
+
+    // Ngày sản xuất của lần in ĐẦU TIÊN cho Work Order này (null nếu đây là lần in đầu tiên).
+    // Toàn bộ nhãn của cùng 1 WO phải dùng chung 1 ngày này — server sẽ tự khóa theo
+    // giá trị này khi in tiếp, bất kể ngày hiện tại trên form là gì.
+    public DateTime? LockedProductionDate { get; set; }
+}
+
+public class ManualUnlockRequest
+{
+    public string Password { get; set; } = "";
 }
 
 public class SnLabelSerialDto
@@ -106,4 +139,15 @@ public class SnLabelHistoryItemDto
     public DateTime PrintedAt { get; set; }
     public string? PrintedBy { get; set; }
     public Guid BatchId { get; set; }
+    public string? WorkOrder { get; set; }
+    public int ReprintCount { get; set; }
+    public DateTime? LastReprintedAt { get; set; }
+}
+
+public class SnLabelHistoryPageDto
+{
+    public List<SnLabelHistoryItemDto> Items { get; set; } = new();
+    public int TotalCount { get; set; }
+    public int Page { get; set; }
+    public int PageSize { get; set; }
 }

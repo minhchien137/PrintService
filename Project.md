@@ -6,7 +6,7 @@
 
 - Framework: ASP.NET Core 8 MVC
 - RootNamespace: `ZplPrinter`
-- Path base: `/quangprint` (mọi URL đều có tiền tố này)
+- Path base: `/print` (mọi URL đều có tiền tố này)
 - Database: SQL Server tại `10.10.99.10`, catalog `svn_pentaho`
 - ORM: Entity Framework Core 8 (schema có sẵn, không dùng migrations)
 
@@ -222,7 +222,7 @@ Trang scan FCT: nhập serial + chọn status (OK/NG), gọi `POST /FctScanToast
 Trang scan FQC: nhận `@model PrinterInfo` từ controller (lookup sẵn `TEST_TOAST_1SERIAL`). Scan serial → gọi `POST /UpdateFqcStatus` → hiển thị kết quả + tự động in nhãn nếu thành công.
 
 ### `Shared/_Layout.cshtml`
-Layout tối giản: không có navbar. Load font Google (Azeret Mono + DM Sans), `site.css`, và đặt `window.APP_BASE` để JS tính đúng path base `/quangprint`.
+Layout tối giản: không có navbar. Load font Google (Azeret Mono + DM Sans), `site.css`, và đặt `window.APP_BASE` để JS tính đúng path base `/print`.
 
 ---
 
@@ -237,8 +237,8 @@ DI Services đăng ký:
 
 Middleware pipeline:
   UseForwardedHeaders
-  UsePathBase("/quangprint")   ← hardcode path base
-  Use(... context.Request.PathBase = "/quangprint" ...)
+  UsePathBase("/print")   ← hardcode path base
+  Use(... context.Request.PathBase = "/print" ...)
   UseStaticFiles
   UseRouting
   UseAuthorization

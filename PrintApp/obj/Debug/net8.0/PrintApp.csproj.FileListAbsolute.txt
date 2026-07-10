@@ -280,3 +280,11 @@ D:\PrintService\PrintApp\obj\Debug\net8.0\refint\PrintApp.dll
 D:\PrintService\PrintApp\obj\Debug\net8.0\PrintApp.pdb
 D:\PrintService\PrintApp\obj\Debug\net8.0\PrintApp.genruntimeconfig.cache
 D:\PrintService\PrintApp\obj\Debug\net8.0\ref\PrintApp.dll
+C:\Users\Minh Chien\AppData\Local\Temp\claude\D--PrintService-PrintApp\1d831727-38e8-4a98-90e7-650d9a6eb4c9\scratchpad\buildcheck\appsettings.json
+C:\Users\Minh Chien\AppData\Local\Temp\claude\D--PrintService-PrintApp\1d831727-38e8-4a98-90e7-650d9a6eb4c9\scratchpad\buildcheck\PrintApp.staticwebassets.runtime.json
+C:\Users\Minh Chien\AppData\Local\Temp\claude\D--PrintService-PrintApp\1d831727-38e8-4a98-90e7-650d9a6eb4c9\scratchpad\buildcheck\PrintApp.staticwebassets.endpoints.json
+C:\Users\Minh Chien\AppData\Local\Temp\claude\D--PrintService-PrintApp\1d831727-38e8-4a98-90e7-650d9a6eb4c9\scratchpad\buildcheck\PrintApp.exe
+C:\Users\Minh Chien\AppData\Local\Temp\claude\D--PrintService-PrintApp\1d831727-38e8-4a98-90e7-650d9a6eb4c9\scratchpad\buildcheck\PrintApp.deps.json
+C:\Users\Minh Chien\AppData\Local\Temp\claude\D--PrintService-PrintApp\1d831727-38e8-4a98-90e7-650d9a6eb4c9\scratchpad\buildcheck\PrintApp.runtimeconfig.json
+C:\Users\Minh Chien\AppData\Local\Temp\claude\D--PrintService-PrintApp\1d831727-38e8-4a98-90e7-650d9a6eb4c9\scratchpad\buildcheck\PrintApp.dll
+C:\Users\Minh Chien\AppData\Local\Temp\claude\D--PrintService-PrintApp\1d831727-38e8-4a98-90e7-650d9a6eb4c9\scratchpad\buildcheck\PrintApp.pdb

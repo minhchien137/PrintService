@@ -5,6 +5,7 @@ using PrintApp.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews();
+builder.Services.AddHttpClient();
 builder.Services.AddScoped<ZplService>();
 
 // ── EF Core — cùng SQL Server với SVN_Tools ───────────────────────────────────
@@ -17,6 +18,7 @@ builder.Services.AddScoped<ToastSerialService>();
 
 // ── Sakura services ────────────────────────────────────────────────────────────
 builder.Services.AddScoped<SakuraService>();
+builder.Services.AddScoped<ViidooService>();
 
 var app = builder.Build();
 
@@ -26,10 +28,10 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseForwardedHeaders();
-app.UsePathBase("/quangprint");
+app.UsePathBase("/print");
 app.Use((context, next) =>
 {
-    context.Request.PathBase = "/quangprint";
+    context.Request.PathBase = "/print";
     return next();
 });
 app.UseStaticFiles();
