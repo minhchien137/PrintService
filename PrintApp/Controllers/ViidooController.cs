@@ -29,7 +29,7 @@ public class ViidooController : ControllerBase
             if (result == null)
                 return NotFound(new { message = "Product code not found" });
 
-            return Ok(new { productCode = result.ProductCode, color = result.Color, quantity = result.Quantity });
+            return Ok(new { productCode = result.ProductCode, color = result.Color, quantity = result.Quantity, productId = result.ProductId });
         }
         catch (InvalidOperationException ex)
         {
@@ -46,6 +46,28 @@ public class ViidooController : ControllerBase
         catch (Exception ex)
         {
             return StatusCode(500, new { message = "General Error", details = ex.Message });
+        }
+    }
+
+    // Debug: xem nguyên record thô Odoo trả về cho productionCode, để đối chiếu trực
+    // tiếp khi 1 field (vd. product_id) trả ra không khớp với những gì thấy trên Odoo UI.
+    [HttpGet("raw")]
+    public async Task<IActionResult> Raw([FromQuery] string productionCode)
+    {
+        if (string.IsNullOrWhiteSpace(productionCode))
+            return BadRequest(new { message = "productionCode parameter is required" });
+
+        try
+        {
+            var record = await _viidoo.GetRawRecordAsync(productionCode);
+            if (record == null)
+                return NotFound(new { message = "Product code not found" });
+
+            return Content(record.Value.GetRawText(), "application/json");
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message });
         }
     }
 }

@@ -23,6 +23,14 @@ build_property._RazorSourceGeneratorDebug =
 build_property.EffectiveAnalysisLevelStyle = 8.0
 build_property.EnableCodeStyleSeverity = 
 
+[D:/PrintService/PrintApp/Views/BackPanel/HistoryLaser.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQmFja1BhbmVsXEhpc3RvcnlMYXNlci5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/PrintService/PrintApp/Views/BackPanel/Laser.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQmFja1BhbmVsXExhc2VyLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
 [D:/PrintService/PrintApp/Views/Print/Index.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUHJpbnRcSW5kZXguY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
