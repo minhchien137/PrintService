@@ -12,6 +12,7 @@ public class ViidooSearchResult
     public string ProductCode { get; set; } = "";
     public string? Color { get; set; }
     public decimal? Quantity { get; set; }
+    public int? ProductId { get; set; }
 }
 
 // Tra cứu Work Order trên Odoo (mrp.production) — trả về mã sản phẩm, màu, số lượng.
@@ -44,6 +45,17 @@ public class ViidooService
         return record == null || string.IsNullOrWhiteSpace(record.cookie) ? null : record.cookie;
     }
 
+    // Debug: trả về nguyên record thô (JSON) mà Odoo trả về cho productionCode — dùng để
+    // đối chiếu trực tiếp khi nghi ngờ 1 field (vd. product_id) không khớp với Odoo UI.
+    public async Task<JsonElement?> GetRawRecordAsync(string productionCode)
+    {
+        string? cookie = await GetCookieFromDbAsync();
+        if (cookie == null)
+            throw new SakuraCodedException("odoo.cookieNotConfigured", "Odoo cookie not configured. Please update SVN_Defect_Cookie table.");
+
+        return await SearchProductionRecordAsync(productionCode, cookie);
+    }
+
     // Tra cứu mã sản phẩm + màu sắc + số lượng từ Work Order.
     // - Màu: quét toàn bộ tên sản phẩm, tìm từ trong ValidColors
     // - Nếu không có màu -> truy ngược lên WO cha qua "origin" (tối đa MaxParentLookupDepth cấp)
@@ -64,6 +76,7 @@ public class ViidooService
         decimal? quantity = record.Value.TryGetProperty("product_qty", out var qtyEl) && qtyEl.ValueKind == JsonValueKind.Number
             ? qtyEl.GetDecimal()
             : null;
+        int? productId = ExtractProductId(record.Value);
 
         if (string.IsNullOrEmpty(productCode)) return null;
 
@@ -94,7 +107,7 @@ public class ViidooService
             depth++;
         }
 
-        return new ViidooSearchResult { ProductCode = productCode, Color = color, Quantity = quantity };
+        return new ViidooSearchResult { ProductCode = productCode, Color = color, Quantity = quantity, ProductId = productId };
     }
 
     // Gọi Odoo web_search_read trên mrp.production theo productionCode,
@@ -194,6 +207,20 @@ public class ViidooService
         {
             var second = productId[1];
             return second.ValueKind == JsonValueKind.String ? second.GetString() : second.ToString();
+        }
+        return null;
+    }
+
+    // Lấy id số của sản phẩm từ product_id[0] của record — ví dụ product_id: [1356, "..."] -> 1356.
+    // Dùng ở trạm Laser để gửi kèm khi gọi API Nhập kết quả sản xuất (sẽ bổ sung sau).
+    private static int? ExtractProductId(JsonElement record)
+    {
+        if (record.TryGetProperty("product_id", out var productId) &&
+            productId.ValueKind == JsonValueKind.Array &&
+            productId.GetArrayLength() >= 1 &&
+            productId[0].ValueKind == JsonValueKind.Number)
+        {
+            return productId[0].GetInt32();
         }
         return null;
     }

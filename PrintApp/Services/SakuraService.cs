@@ -94,6 +94,20 @@ public class SakuraService
         return byColor.Variant;
     }
 
+    // Trích màu từ mã variant (2 ký tự ngay sau model "RM15A") của 1 serial đã in/laser.
+    // Dùng ở trạm Laser (Back Panel) để đối chiếu màu SN vừa quét với màu Work Order.
+    // Trả về null nếu serial không đúng định dạng (sai model, quá ngắn, variant lạ).
+    public static string? TryResolveColorFromSerial(string serial)
+    {
+        if (string.IsNullOrWhiteSpace(serial)) return null;
+        string s = serial.Trim().ToUpperInvariant();
+        // Serial luôn đúng 15 ký tự: Model(5) + variant(2) + year(1) + day(3) + line(1) + running(3).
+        if (s.Length != 15 || !s.StartsWith(Model)) return null;
+
+        string variant = s.Substring(Model.Length, 2);
+        return VariantColorMap.TryGetValue(variant, out var color) ? color : null;
+    }
+
     // ── Serial number formatting ─────────────────────────────────────────────
 
     public static string BuildSerial(string variant, DateTime productionDate, string line, string runningNumber)
@@ -461,7 +475,9 @@ public class SakuraService
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private static DateTime VietnamNow()
+    // Public vì các controller/service khác (vd BackPanelController khi ghi log)
+    // cũng cần giờ Việt Nam nhất quán với giờ in nhãn SN.
+    public static DateTime VietnamNow()
     {
         var tzId = System.Runtime.InteropServices.RuntimeInformation
             .IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows)

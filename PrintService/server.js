@@ -11,7 +11,6 @@
  */
 
 const express = require('express');
-const cors    = require('cors');
 const net     = require('net');
 const fs      = require('fs');
 const path    = require('path');
@@ -20,13 +19,57 @@ const os      = require('os');
 
 const app  = express();
 const PORT = 8021;
+const HOST = '127.0.0.1'; // Chỉ trình duyệt trên CHÍNH máy này gọi được — không bind 0.0.0.0.
+const SN_TXT_PATH = 'D:\\LOG\\SN.txt'; // Trạm Laser (Back Panel) — máy laser đọc serial từ đây
 
-// ── CORS ──────────────────────────────────────────────────────────────────────
-app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type']
-}));
+// ── CORS + Private Network Access (Chrome/Edge) ──────────────────────────────
+// Web app MES (vd https://ds.sigmaworldwide.io) là 1 trang HTTPS công cộng gọi
+// vào địa chỉ loopback (localhost:8021) của chính máy trạm — trình duyệt coi đây
+// là truy cập "cross address-space" nên bắt buộc phải có:
+//   1. Access-Control-Allow-Origin đúng origin gọi tới (không dùng "*")
+//   2. Access-Control-Allow-Private-Network: true khi preflight yêu cầu
+// Danh sách origin cho phép nằm ở config.json (cùng thư mục), không hardcode.
+const ALLOWED_ORIGINS = loadAllowedOrigins();
+
+function loadAllowedOrigins() {
+  const configPath = path.join(__dirname, 'config.json');
+  try {
+    const raw = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    if (Array.isArray(raw.allowedOrigins) && raw.allowedOrigins.length > 0) {
+      console.log(`[CORS] Da nap ${raw.allowedOrigins.length} allowed origin(s) tu config.json:`, raw.allowedOrigins);
+      return raw.allowedOrigins;
+    }
+    console.warn('[CORS] config.json khong co allowedOrigins hop le - moi origin se bi tu choi.');
+  } catch (err) {
+    console.warn(`[CORS] Khong doc duoc config.json (${err.message}) - moi origin se bi tu choi.`);
+  }
+  return [];
+}
+
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  const isAllowed = !!origin && ALLOWED_ORIGINS.includes(origin);
+
+  if (origin && isAllowed) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', req.headers['access-control-request-headers'] || 'Content-Type, Authorization');
+
+    if (req.headers['access-control-request-private-network'] === 'true') {
+      res.setHeader('Access-Control-Allow-Private-Network', 'true');
+    }
+  } else if (origin) {
+    // Log lại origin lạ để debug (vd quên thêm domain mới vào config.json).
+    console.warn(`[CORS] Tu choi request tu origin la: ${origin} (khong nam trong allowedOrigins)`);
+  }
+
+  // Preflight không cần auth, luôn trả 204 ngay tại đây.
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+
+  next();
+});
+
 app.use(express.json({ limit: '5mb' }));
 
 // ── Util: gửi ZPL qua TCP raw socket ─────────────────────────────────────────
@@ -288,6 +331,38 @@ app.post('/print-usb', async (req, res) => {
   }
 });
 
+// ── POST /write-sn-file ────────────────────────────────────────────────────────
+// Trạm Laser (Back Panel, PrintApp) — sau khi Check + Nhập KQSX đã pass ở server
+// trung tâm, trình duyệt gọi endpoint này để ghi đè SN.txt cho máy laser đọc.
+// Body: { serial: string }
+app.post('/write-sn-file', (req, res) => {
+  const { serial } = req.body ?? {};
+
+  if (!serial || typeof serial !== 'string')
+    return res.json({ success: false, error: 'Thiếu trường "serial".' });
+
+  console.log(`\n► [WRITE SN.txt] ${new Date().toLocaleTimeString()}`);
+  console.log(`  Path  : ${SN_TXT_PATH}`);
+  console.log(`  Serial: ${serial}`);
+
+  try {
+    const dir = path.dirname(SN_TXT_PATH);
+    fs.mkdirSync(dir, { recursive: true });
+
+    // Ghi qua file tạm rồi rename đè lên — máy laser không bao giờ đọc được file
+    // đang ghi dở (cùng cách logic cũ ở PrintApp/LaserSnFileWriterService làm).
+    const tmpPath = SN_TXT_PATH + '.tmp';
+    fs.writeFileSync(tmpPath, serial, 'utf8');
+    fs.renameSync(tmpPath, SN_TXT_PATH);
+
+    console.log(`  ✓ Ghi thành công`);
+    return res.json({ success: true });
+  } catch (err) {
+    console.error(`  ✗ Lỗi: ${err.message}`);
+    return res.json({ success: false, error: err.message });
+  }
+});
+
 // ── GET /health ───────────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => {
   res.json({
@@ -327,15 +402,16 @@ app.get('/ping-printer', (req, res) => {
 });
 
 // -- Start -----------------------------------------------------------------
-app.listen(PORT, () => {
+app.listen(PORT, HOST, () => {
   console.log('');
   console.log('  +--------------------------------------------+');
-  console.log('  |   ZPL Print Service - localhost             |');
+  console.log(`  |   ZPL Print Service - ${HOST}             |`);
   console.log(`  |   Port: ${PORT}  |  OS: ${os.platform().padEnd(10)}          |`);
   console.log('  +--------------------------------------------+');
   console.log('  |  POST /print          -> In TCP/IP          |');
   console.log('  |  POST /print-usb      -> In USB             |');
   console.log('  |  GET  /usb-printers   -> Liet ke USB        |');
+  console.log('  |  POST /write-sn-file  -> Ghi SN.txt (Laser) |');
   console.log('  |  GET  /health         -> Kiem tra           |');
   console.log('  |  GET  /ping-printer   -> Test TCP           |');
   console.log('  +--------------------------------------------+');

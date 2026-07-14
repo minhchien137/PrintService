@@ -76,6 +76,35 @@ public class SakuraController : Controller
             },
             new SakuraAppTile
             {
+                Key = "laserstation",
+                Icon = "🔦",
+                Title = "Laser Station",
+                Subtitle = "Back Panel laser marking check",
+                Enabled = true,
+                Items = new List<SakuraAppTile>
+                {
+                    new SakuraAppTile
+                    {
+                        Key = "laser",
+                        Icon = "🔦",
+                        Title = "Laser",
+                        Subtitle = "Scan Work Order & Serial Number",
+                        Href = Url.Content("~/backpanel/laser"),
+                        Enabled = true
+                    },
+                    new SakuraAppTile
+                    {
+                        Key = "logLaser",
+                        Icon = "📋",
+                        Title = "Log Laser",
+                        Subtitle = "Laser scan history",
+                        Href = Url.Content("~/backpanel/laser/history"),
+                        Enabled = true
+                    }
+                }
+            },
+            new SakuraAppTile
+            {
                 Key = "comingsoon",
                 Icon = "➕",
                 Title = "Coming soon",

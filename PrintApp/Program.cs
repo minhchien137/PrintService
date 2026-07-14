@@ -20,9 +20,16 @@ builder.Services.AddScoped<ToastSerialService>();
 builder.Services.AddScoped<SakuraService>();
 builder.Services.AddScoped<ViidooService>();
 
+// ── Back Panel services ────────────────────────────────────────────────────────
+builder.Services.AddSingleton<ProductionResultApiService>();
+
 var app = builder.Build();
 
-if (!app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment())
+{
+    app.UseDeveloperExceptionPage();
+}
+else
 {
     app.UseExceptionHandler("/Home/Error");
 }
