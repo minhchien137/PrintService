@@ -32,5 +32,11 @@ public class BackPanelLaserLog
     [StringLength(50)]
     public string? ProductionResultSubName { get; set; }
 
+    // Chi tiết lý do NG (message thật từ API hoặc exception khi query DB tính subName) —
+    // NULL nếu PASS. Dùng để tra nguyên nhân khi lỗi lặp lại, vì message hiện ra cho vận
+    // hành viên (checkResultMessage/inputResultMessage) đôi khi bị thay bằng câu chung chung.
+    [StringLength(500)]
+    public string? FailReason { get; set; }
+
     public DateTime Timeline { get; set; }
 }

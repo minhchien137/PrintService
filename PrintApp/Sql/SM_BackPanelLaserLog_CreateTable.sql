@@ -31,3 +31,10 @@ BEGIN
     ALTER TABLE dbo.SM_BackPanelLaserLog ADD ProductionResultSubName NVARCHAR(50) NULL;
 END
 GO
+
+-- Bảng đã tạo từ trước khi có FailReason — thêm cột cho môi trường đã có sẵn bảng.
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.SM_BackPanelLaserLog') AND name = 'FailReason')
+BEGIN
+    ALTER TABLE dbo.SM_BackPanelLaserLog ADD FailReason NVARCHAR(500) NULL;
+END
+GO

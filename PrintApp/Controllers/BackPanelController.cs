@@ -23,6 +23,10 @@ public class BackPanelController : Controller
         _productionApi = productionApi;
     }
 
+    // Cắt bớt message dài (vd exception stack chi tiết) cho vừa cột FailReason NVARCHAR(500).
+    private static string? Truncate(string? s, int maxLength) =>
+        string.IsNullOrEmpty(s) || s.Length <= maxLength ? s : s.Substring(0, maxLength);
+
     // Gói 1 exception thành JSON lỗi có errorCode/errorParams (nếu có) để front-end tự
     // dịch theo EN/ZH đang chọn — cùng quy ước với SakuraController.BuildError.
     private static object BuildError(Exception ex)
@@ -94,6 +98,7 @@ public class BackPanelController : Controller
         bool? inputResultOk = null;
         string? inputResultMessage = null;
         string? subName = null;
+        string? failReason = null;
 
         if (match)
         {
@@ -119,20 +124,36 @@ public class BackPanelController : Controller
                 var checkResult = await _productionApi.CheckLotSerialFgAsync(productId, serial);
                 checkResultOk = checkResult.Ok;
                 checkResultMessage = checkResult.Message;
+                if (!checkResult.Ok) failReason = checkResult.Message;
 
                 if (checkResult.Ok)
                 {
-                    try
+                    // Query tính subName đôi khi gặp lỗi ngắt quãng (mất kết nối/lock tạm thời
+                    // tới SQL Server) — thử lại vài lần trước khi bỏ cuộc, thay vì báo NG ngay
+                    // từ lần lỗi đầu tiên. KHÔNG được tự đoán subName khi hết lượt thử vẫn lỗi.
+                    const int maxAttempts = 3;
+                    Exception? lastEx = null;
+                    for (int attempt = 1; attempt <= maxAttempts; attempt++)
                     {
-                        subName = await BuildNextSubNameAsync(workOrder);
+                        try
+                        {
+                            subName = await BuildNextSubNameAsync(workOrder);
+                            lastEx = null;
+                            break;
+                        }
+                        catch (Exception ex)
+                        {
+                            lastEx = ex;
+                            if (attempt < maxAttempts) await Task.Delay(1000);
+                        }
                     }
-                    catch (Exception ex)
+
+                    if (lastEx != null)
                     {
-                        // Mất kết nối SQL Server / query lỗi — KHÔNG được tự đoán subName rồi vẫn
-                        // gọi API nhập KQSX, phải dừng lại và báo rõ cho vận hành viên.
-                        Console.WriteLine($"[BackPanel] Loi query SVN_ProductionInputLogs de tinh subName: {ex.Message}");
+                        Console.WriteLine($"[BackPanel] Loi query SVN_ProductionInputLogs de tinh subName (sau {maxAttempts} lan thu): {lastEx.Message}");
                         inputResultOk = false;
                         inputResultMessage = "Không lấy được số thứ tự WO từ database.";
+                        failReason = $"BuildNextSubNameAsync: {lastEx.Message}";
                     }
 
                     if (subName != null)
@@ -141,7 +162,11 @@ public class BackPanelController : Controller
                             workOrder, subName, serial, productId, req.TotalQuantity ?? 0);
                         inputResultOk = inputResult.Ok;
                         inputResultMessage = inputResult.Message;
-                        if (!inputResult.Ok) subName = null; // API 2 fail -> không tính là đã dùng subName này.
+                        if (!inputResult.Ok)
+                        {
+                            subName = null; // API 2 fail -> không tính là đã dùng subName này.
+                            failReason = inputResult.Message;
+                        }
                     }
                 }
             }
@@ -149,6 +174,7 @@ public class BackPanelController : Controller
             {
                 checkResultOk = false;
                 checkResultMessage = "Thiếu Product ID của Work Order — vui lòng quét lại Work Order.";
+                failReason = checkResultMessage;
             }
         }
 
@@ -169,6 +195,7 @@ public class BackPanelController : Controller
                 Status = status,
                 FailedStep = failedStep,
                 ProductionResultSubName = subName,
+                FailReason = failedStep != null ? Truncate(failReason, 500) : null,
                 Timeline = SakuraService.VietnamNow()
             };
             _db.BackPanelLaserLogs.Add(logEntry);
@@ -234,7 +261,7 @@ public class BackPanelController : Controller
                     CASE WHEN CHARINDEX('-', REVERSE(wo_code)) > 0
                          THEN TRY_CAST(RIGHT(wo_code, CHARINDEX('-', REVERSE(wo_code)) - 1) AS INT)
                          ELSE NULL END
-                ), 0)
+                ), 0) AS Value
                 FROM [svn_pentaho].[dbo].[SVN_ProductionInputLogs]
                 WHERE master_wo_code = {masterWoCode}")
             .SingleAsync();
@@ -278,6 +305,7 @@ public class BackPanelController : Controller
                 Status = x.Status,
                 FailedStep = x.FailedStep,
                 ProductionResultSubName = x.ProductionResultSubName,
+                FailReason = x.FailReason,
                 Timeline = x.Timeline
             })
             .ToListAsync();
