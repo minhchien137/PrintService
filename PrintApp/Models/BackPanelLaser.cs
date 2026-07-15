@@ -28,6 +28,7 @@ public class BackPanelLaserLogItemDto
     public string Status { get; set; } = "";
     public int? FailedStep { get; set; }
     public string? ProductionResultSubName { get; set; }
+    public string? FailReason { get; set; }
     public DateTime Timeline { get; set; }
 }
 

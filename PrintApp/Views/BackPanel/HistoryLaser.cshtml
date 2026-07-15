@@ -203,12 +203,13 @@
                     <th data-i18n="laserHistory.colSerial">Serial Number</th>
                     <th data-i18n="laserHistory.colStatus">Status</th>
                     <th data-i18n="laserHistory.colFailedStep">Failed At</th>
+                    <th data-i18n="laserHistory.colFailReason">Reason</th>
                     <th data-i18n="laserHistory.colSubName">Sub Name</th>
                     <th data-i18n="laserHistory.colTimeline">Timeline</th>
                 </tr>
             </thead>
             <tbody id="histRows">
-                <tr><td colspan="6" style="text-align:center;color:var(--gray-500);padding:16px">—</td></tr>
+                <tr><td colspan="7" style="text-align:center;color:var(--gray-500);padding:16px">—</td></tr>
             </tbody>
         </table>
 
@@ -271,7 +272,7 @@
         if ($histWorkOrder.value.trim()) params.set('workOrder', $histWorkOrder.value.trim());
         if ($histSerial.value.trim()) params.set('serialNumber', $histSerial.value.trim());
 
-        $histRows.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--gray-500);padding:16px">${t('laserHistory.loading', 'Loading…')}</td></tr>`;
+        $histRows.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--gray-500);padding:16px">${t('laserHistory.loading', 'Loading…')}</td></tr>`;
         try {
             const res = await fetch(`${BASE}/api/backpanel/laser/history?${params}`);
             const body = await res.json();
@@ -285,7 +286,7 @@
         } catch (e) {
             lastRows = null;
             lastTotalCount = 0;
-            $histRows.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--danger);padding:16px">✗ ${e.message}</td></tr>`;
+            $histRows.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--danger);padding:16px">✗ ${e.message}</td></tr>`;
             renderPagination();
         }
     }
@@ -337,9 +338,13 @@
         return '—';
     }
 
+    function escapeHtml(s) {
+        return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
     function renderHistory(rows) {
         if (!rows.length) {
-            $histRows.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--gray-500);padding:16px">${t('laserHistory.noData', 'No data yet.')}</td></tr>`;
+            $histRows.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--gray-500);padding:16px">${t('laserHistory.noData', 'No data yet.')}</td></tr>`;
             return;
         }
         $histRows.innerHTML = rows.map(r => {
@@ -348,12 +353,16 @@
             const failedStepCell = r.failedStep
                 ? `<span class="failstep-badge">✕ ${STEP_DISPLAY_NUMBER[r.failedStep] || r.failedStep} — ${stepLabel(r.failedStep)}</span>`
                 : `<span class="failstep-none">—</span>`;
+            const failReasonCell = r.failReason
+                ? `<span title="${escapeHtml(r.failReason)}" style="color:var(--gray-500);font-size:0.78rem">${escapeHtml(r.failReason.length > 60 ? r.failReason.slice(0, 60) + '…' : r.failReason)}</span>`
+                : `<span class="failstep-none">—</span>`;
             return `
                 <tr>
                     <td>${r.workOrder || '—'}</td>
                     <td>${r.serialNumber}</td>
                     <td><span class="status-badge ${statusCls}">${r.status}</span></td>
                     <td>${failedStepCell}</td>
+                    <td>${failReasonCell}</td>
                     <td>${r.productionResultSubName || '—'}</td>
                     <td>${timeline}</td>
                 </tr>`;
