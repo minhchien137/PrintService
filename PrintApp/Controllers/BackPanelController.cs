@@ -122,12 +122,27 @@ public class BackPanelController : Controller
 
                 if (checkResult.Ok)
                 {
-                    subName = await BuildNextSubNameAsync(workOrder);
-                    var inputResult = await _productionApi.InputProductionResultLogAsync(
-                        workOrder, subName, serial, productId, req.TotalQuantity ?? 0);
-                    inputResultOk = inputResult.Ok;
-                    inputResultMessage = inputResult.Message;
-                    if (!inputResult.Ok) subName = null; // API 2 fail -> không tính là đã dùng subName này.
+                    try
+                    {
+                        subName = await BuildNextSubNameAsync(workOrder);
+                    }
+                    catch (Exception ex)
+                    {
+                        // Mất kết nối SQL Server / query lỗi — KHÔNG được tự đoán subName rồi vẫn
+                        // gọi API nhập KQSX, phải dừng lại và báo rõ cho vận hành viên.
+                        Console.WriteLine($"[BackPanel] Loi query SVN_ProductionInputLogs de tinh subName: {ex.Message}");
+                        inputResultOk = false;
+                        inputResultMessage = "Không lấy được số thứ tự WO từ database.";
+                    }
+
+                    if (subName != null)
+                    {
+                        var inputResult = await _productionApi.InputProductionResultLogAsync(
+                            workOrder, subName, serial, productId, req.TotalQuantity ?? 0);
+                        inputResultOk = inputResult.Ok;
+                        inputResultMessage = inputResult.Message;
+                        if (!inputResult.Ok) subName = null; // API 2 fail -> không tính là đã dùng subName này.
+                    }
                 }
             }
             else
@@ -204,14 +219,27 @@ public class BackPanelController : Controller
         return Ok(new { ok = true });
     }
 
-    // Đếm số lần nhập KQSX thành công trước đó của Work Order này để tính subName tiếp
-    // theo ("{WO}-{N+1:000}"). Chấp nhận rủi ro race condition nhỏ nếu 2 trạm cùng quét
-    // 1 WO tại cùng thời điểm, vì quy trình quét vốn tuần tự theo thao tác 1 vận hành viên.
-    private async Task<string> BuildNextSubNameAsync(string workOrder)
+    // Lấy số thứ tự WO con lớn nhất hiện có của master_wo_code này từ
+    // SVN_ProductionInputLogs (nguồn sự thật thực tế, không phải log local của app), +1,
+    // để tính subName tiếp theo ("{masterWoCode}-{max+1:000}"). Luôn query DB tại đúng thời
+    // điểm gọi (không cache theo phiên) để lấy số mới nhất. Ném exception nếu query fail —
+    // caller phải dừng lại, không được tự đoán subName khi mất kết nối DB.
+    private async Task<string> BuildNextSubNameAsync(string masterWoCode)
     {
-        int count = await _db.BackPanelLaserLogs
-            .CountAsync(x => x.WorkOrder == workOrder && x.Status == "PASS");
-        return $"{workOrder}-{(count + 1):D3}";
+        // CASE WHEN chặn trước trường hợp wo_code không có dấu '-' (RIGHT sẽ lỗi length âm
+        // nếu thiếu bọc này — TRY_CAST một mình không chặn được lỗi đó).
+        int maxSuffix = await _db.Database
+            .SqlQuery<int>($@"
+                SELECT ISNULL(MAX(
+                    CASE WHEN CHARINDEX('-', REVERSE(wo_code)) > 0
+                         THEN TRY_CAST(RIGHT(wo_code, CHARINDEX('-', REVERSE(wo_code)) - 1) AS INT)
+                         ELSE NULL END
+                ), 0)
+                FROM [svn_pentaho].[dbo].[SVN_ProductionInputLogs]
+                WHERE master_wo_code = {masterWoCode}")
+            .SingleAsync();
+
+        return $"{masterWoCode}-{(maxSuffix + 1):D3}";
     }
 
     // ── API: lịch sử quét (filter theo Work Order / Serial Number, phân trang) ──
