@@ -129,6 +129,12 @@
     }
     .lz-readout-row .v { font-family: var(--font-head); font-size: 20px; font-weight: 700; color: var(--red-dark); letter-spacing: 0.3px; }
 
+    /* ── WO progress readout (current subName / total quantity) — right of Reset/Save ── */
+    .wo-progress {
+        margin-left: auto; font-family: var(--font-head); font-size: 18px; font-weight: 800;
+        color: var(--red-dark); letter-spacing: 0.3px;
+    }
+
     /* ── Color result — banner full-width, nổi bật theo đúng màu Work Order ── */
     .lz-color-result { margin-top: 16px; }
     .lz-color-label {
@@ -280,6 +286,7 @@
                 <div class="t-actions">
                     <button type="button" class="t-btn t-btn-ghost" id="btnReset" data-i18n="middleInput.resetBtn">✕ Reset</button>
                     <button type="button" class="t-btn t-btn-ghost" id="btnSave" data-i18n="middleInput.saveBtn">Save</button>
+                    <div class="wo-progress" id="woProgress" style="display:none"></div>
                 </div>
             </div>
 
@@ -377,6 +384,7 @@
     const $woColor     = document.getElementById('woColor');
     const $btnReset    = document.getElementById('btnReset');
     const $btnSave     = document.getElementById('btnSave');
+    const $woProgress  = document.getElementById('woProgress');
 
     const $serialNumber    = document.getElementById('serialNumber');
     const $serialStatus    = document.getElementById('serialStatus');
@@ -394,7 +402,27 @@
     let expectedColor = null; // Màu resolve được từ Work Order đang chọn
     let expectedProductId = null; // product_id (số) của Work Order — dùng cho bước 2/3
     let expectedQuantity = null; // Tổng số lượng của WO — dùng làm totalQuantity ở bước 3
+    let currentSubNameSuffix = null; // Số thứ tự subName lớn nhất hiện tại của WO (vd 4718 trong NM/MO/03879-4718) — hiển thị "currentSubNameSuffix/expectedQuantity" cạnh Reset/Save
     let circleTimer = null; // Hẹn giờ tự tắt (về idle) sau khi hiện PASS/FAIL
+
+    // "{masterWoCode}-4718" -> 4718. Cùng quy tắc parse với BuildNextSubNameAsync ở server
+    // (lấy phần sau dấu '-' cuối cùng, vì workOrder tự nó có thể chứa dấu '-').
+    function parseSubNameSuffix(subName) {
+        if (!subName) return null;
+        const idx = subName.lastIndexOf('-');
+        if (idx < 0 || idx === subName.length - 1) return null;
+        const n = parseInt(subName.slice(idx + 1), 10);
+        return Number.isNaN(n) ? null : n;
+    }
+
+    function updateWoProgress() {
+        if (currentSubNameSuffix == null || expectedQuantity == null) {
+            $woProgress.style.display = 'none';
+            return;
+        }
+        $woProgress.textContent = `${currentSubNameSuffix}/${expectedQuantity}`;
+        $woProgress.style.display = 'block';
+    }
 
     // SN đang bị khoá chờ Try Again/Skip vì fail ở bước 3 (bước 1/2 fail thì không khoá —
     // cho quét lại serial khác/serial đúng ngay).
@@ -533,6 +561,8 @@
         expectedColor = null;
         expectedProductId = null;
         expectedQuantity = null;
+        currentSubNameSuffix = null;
+        updateWoProgress();
         $woResolved.style.display = 'none';
         resetResult();
 
@@ -550,6 +580,8 @@
             expectedColor = body.data.color;
             expectedProductId = body.data.productId;
             expectedQuantity = body.data.quantity;
+            currentSubNameSuffix = typeof body.data.currentSubNameSuffix === 'number' ? body.data.currentSubNameSuffix : null;
+            updateWoProgress();
             setWoColorBadge(expectedColor);
             $woResolved.style.display = 'block';
             showStatus($woStatus, `✓ ${translateColor(expectedColor)}`, 'ok');
@@ -572,6 +604,8 @@
         expectedColor = null;
         expectedProductId = null;
         expectedQuantity = null;
+        currentSubNameSuffix = null;
+        updateWoProgress();
         $woResolved.style.display = 'none';
         setWoColorBadge('');
         localStorage.removeItem(LS_WO_KEY);
@@ -613,6 +647,15 @@
             });
             const body = await res.json();
             if (!res.ok || !body.ok) throw new Error(window.SakuraI18n.translateApiError(body, t('middleInput.verifyFailed', 'Verify failed.')));
+
+            // subName chỉ có giá trị khi Check + Nhập KQSX đã pass — nghĩa là đây chính là
+            // subName lớn nhất hiện tại của WO, cập nhật ngay để text tiến độ
+            // (currentSubNameSuffix/expectedQuantity) luôn khớp thực tế.
+            const parsedSuffix = parseSubNameSuffix(body.data.subName);
+            if (parsedSuffix != null) {
+                currentSubNameSuffix = parsedSuffix;
+                updateWoProgress();
+            }
 
             $resScanned.textContent = translateColor(body.data.color);
             $resExpected.textContent = translateColor(body.data.expectedColor);

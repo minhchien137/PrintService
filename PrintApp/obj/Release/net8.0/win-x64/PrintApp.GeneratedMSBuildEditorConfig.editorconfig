@@ -31,6 +31,22 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQmFja1BhbmVsXExhc2VyLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
+[D:/PrintService/PrintApp/Views/Middle/HistoryInputResult.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTWlkZGxlXEhpc3RvcnlJbnB1dFJlc3VsdC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/PrintService/PrintApp/Views/Middle/InputResult.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTWlkZGxlXElucHV0UmVzdWx0LmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/PrintService/PrintApp/Views/Middle/Result.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTWlkZGxlXFJlc3VsdC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/PrintService/PrintApp/Views/Middle/Summary.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTWlkZGxlXFN1bW1hcnkuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
 [D:/PrintService/PrintApp/Views/Print/Index.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUHJpbnRcSW5kZXguY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
