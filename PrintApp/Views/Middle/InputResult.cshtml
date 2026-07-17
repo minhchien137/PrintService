@@ -1,5 +1,5 @@
 @{
-    ViewData["Title"] = "Laser Marking Check — Back Panel";
+    ViewData["Title"] = "Enter Production Result — Middle";
 }
 
 <style>
@@ -56,7 +56,6 @@
 
     .lz-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 28px; }
     .lz-header h1 { font-family: var(--font-head); font-size: 24px; font-weight: 800; letter-spacing: -0.3px; color: var(--red-dark); }
-    .lz-header p { font-family: var(--font-body); font-size: 0.85rem; color: var(--gray-500); margin-top: 5px; }
     .lz-header .accent-bar {
         display: block; width: 40px; height: 4px; border-radius: 4px; margin-top: 12px;
         background: linear-gradient(90deg, var(--red-dark), var(--red-mid));
@@ -211,7 +210,7 @@
         .lz-circle { width: 220px; height: 220px; font-size: 34px; }
     }
 
-    /* ── Language switcher — fixed top-right, shared across all Sakura pages ── */
+    /* ── Language switcher — fixed top-right, shared across all app pages ── */
     .sk-lang-switch {
         position: fixed; top: 18px; right: 22px; z-index: 100;
         display: flex; gap: 8px;
@@ -232,6 +231,13 @@
         .sk-lang-switch { top: 12px; right: 12px; padding: 4px 5px; gap: 6px; }
         .sk-lang-flag { width: 22px; height: 22px; }
     }
+
+    .lz-links { display: flex; gap: 18px; }
+    .lz-links a {
+        font-family: var(--font-body); font-size: 11px; color: var(--gray-500); letter-spacing: 0.5px;
+        text-decoration: none; border-bottom: 1px solid var(--gray-200);
+    }
+    .lz-links a:hover { color: var(--red); border-bottom-color: var(--red); }
 </style>
 
 @await Html.PartialAsync("~/Views/Sakura/_LangSwitcher.cshtml")
@@ -240,11 +246,10 @@
 
     <header class="lz-header">
         <div>
-            <h1 data-i18n="laser.title">LASER MARKING CHECK</h1>
-            <p data-i18n="laser.subtitle">Back Panel — Sakura</p>
+            <h1 data-i18n="middleInput.title">ENTER PRODUCTION RESULT</h1>
             <span class="accent-bar"></span>
         </div>
-        <div class="lz-badge" data-i18n="laser.badge">BACK PANEL</div>
+        <div class="lz-badge">MIDDLE</div>
     </header>
 
     <div class="lz-layout">
@@ -253,51 +258,45 @@
         <div class="lz-left">
 
             <div class="t-section">
-                <div class="t-section-label" data-i18n="laser.workOrderSection">Work Order</div>
+                <div class="t-section-label" data-i18n="middleInput.workOrderSection">Work Order</div>
 
                 <div class="t-grid t-grid-2" style="align-items:end">
                     <div class="t-field">
-                        <label data-i18n="laser.workOrder">Work Order</label>
-                        <input type="text" id="workOrder" autocomplete="off" data-i18n-placeholder="laser.workOrderPlaceholder" placeholder="Scan or type Work Order…" />
+                        <label data-i18n="middleInput.workOrder">Work Order</label>
+                        <input type="text" id="workOrder" autocomplete="off" data-i18n-placeholder="middleInput.workOrderPlaceholder" placeholder="Scan or type Work Order…" />
                     </div>
                     <div class="t-actions" style="margin-top:0">
-                        <button type="button" class="t-btn t-btn-outline" id="btnLookupWo" data-i18n="laser.lookupBtn">🔍 Lookup</button>
+                        <button type="button" class="t-btn t-btn-outline" id="btnLookupWo" data-i18n="middleInput.lookupBtn">🔍 Lookup</button>
                     </div>
                 </div>
 
                 <div id="woStatus" class="t-status"></div>
 
                 <div class="lz-color-result" id="woResolved" style="display:none">
-                    <div class="lz-color-label" data-i18n="laser.color">Color</div>
+                    <div class="lz-color-label" data-i18n="middleInput.color">Color</div>
                     <div class="color-badge" id="woColor">—</div>
                 </div>
 
                 <div class="t-actions">
-                    <button type="button" class="t-btn t-btn-ghost" id="btnReset" data-i18n="laser.resetBtn">✕ Reset</button>
-                    <button type="button" class="t-btn t-btn-ghost" id="btnSave" data-i18n="laser.saveBtn">Save</button>
+                    <button type="button" class="t-btn t-btn-ghost" id="btnReset" data-i18n="middleInput.resetBtn">✕ Reset</button>
+                    <button type="button" class="t-btn t-btn-ghost" id="btnSave" data-i18n="middleInput.saveBtn">Save</button>
                 </div>
             </div>
 
             <div class="t-section">
-                <div class="t-section-label" data-i18n="laser.serialSection">Serial Number</div>
+                <div class="t-section-label" data-i18n="middleInput.serialSection">Serial Number</div>
 
                 <div class="t-field">
-                    <label data-i18n="laser.serialLabel">Serial Number</label>
-                    <input type="text" id="serialNumber" autocomplete="off" data-i18n-placeholder="laser.serialPlaceholder" placeholder="Scan Serial Number…" />
+                    <label data-i18n="middleInput.serialLabel">Serial Number</label>
+                    <input type="text" id="serialNumber" autocomplete="off" data-i18n-placeholder="middleInput.serialPlaceholder" placeholder="Scan Serial Number…" />
                 </div>
 
                 <div id="serialStatus" class="t-status"></div>
             </div>
 
-            <div style="display:flex;gap:18px">
-                <a href="@Url.Content("~/sakura")" data-i18n="laser.backHome" style="font-family:var(--font-body);font-size:11px;color:var(--gray-500);
-                    letter-spacing:0.5px;text-decoration:none;border-bottom:1px solid var(--gray-200);">
-                    ← Sakura Home
-                </a>
-                <a href="@Url.Content("~/backpanel/laser/history")" data-i18n="laser.viewHistory" style="font-family:var(--font-body);font-size:11px;color:var(--gray-500);
-                    letter-spacing:0.5px;text-decoration:none;border-bottom:1px solid var(--gray-200);">
-                    View History →
-                </a>
+            <div class="lz-links">
+                <a href="@Url.Content("~/sakura")" data-i18n="middleInput.backHome">← Back to Home</a>
+                <a href="@Url.Content("~/middle/inputresult/history")" data-i18n="middleInput.viewHistory">View History →</a>
             </div>
 
         </div>
@@ -305,21 +304,21 @@
         <!-- ── Middle: PASS / FAIL result ── -->
         <div class="lz-mid">
             <div class="t-section" style="text-align:center">
-                <div class="t-section-label" data-i18n="laser.resultSection">Result</div>
+                <div class="t-section-label" data-i18n="middleInput.resultSection">Result</div>
 
                 <div class="lz-circle-wrap">
-                    <div class="lz-circle idle" id="laserCircle">
-                        <span id="laserCircleText">—</span>
+                    <div class="lz-circle idle" id="resultCircle">
+                        <span id="resultCircleText">—</span>
                     </div>
                 </div>
 
                 <div class="lz-readout" id="resultResolved" style="display:none">
                     <div class="lz-readout-row">
-                        <span class="k" data-i18n="laser.scannedColor">Scanned Color</span>
+                        <span class="k" data-i18n="middleInput.scannedColor">Scanned Color</span>
                         <span class="v" id="resScanned">—</span>
                     </div>
                     <div class="lz-readout-row">
-                        <span class="k" data-i18n="laser.expectedColor">Expected Color</span>
+                        <span class="k" data-i18n="middleInput.expectedColor">Expected Color</span>
                         <span class="v" id="resExpected">—</span>
                     </div>
                 </div>
@@ -329,32 +328,28 @@
         <!-- ── Right: Process steps tracker ── -->
         <div class="lz-right">
             <div class="t-section">
-                <div class="t-section-label" data-i18n="laser.stepsSection">Process</div>
-                <div class="lz-steps" id="laserSteps">
+                <div class="t-section-label" data-i18n="middleInput.stepsSection">Process</div>
+                <div class="lz-steps" id="resultSteps">
                     <div class="lz-step" id="step1Row">
                         <div class="lz-step-icon" id="step1Icon">1</div>
-                        <div class="lz-step-label" data-i18n="laser.step1Label">Scan Color Check</div>
+                        <div class="lz-step-label" data-i18n="middleInput.step1Label">Scan Color Check</div>
                     </div>
                     <div class="lz-step" id="step2Row">
                         <div class="lz-step-icon" id="step2Icon">2.1</div>
-                        <div class="lz-step-label" data-i18n="laser.step2Label">Check Serial Number Already Entered</div>
+                        <div class="lz-step-label" data-i18n="middleInput.step2Label">Check Serial Number Already Entered</div>
                     </div>
                     <div class="lz-step" id="step3Row">
                         <div class="lz-step-icon" id="step3Icon">2.2</div>
-                        <div class="lz-step-label" data-i18n="laser.step3Label">Enter Production Result</div>
-                    </div>
-                    <div class="lz-step" id="step4Row">
-                        <div class="lz-step-icon" id="step4Icon">3</div>
-                        <div class="lz-step-label" data-i18n="laser.step4Label">Print Laser</div>
+                        <div class="lz-step-label" data-i18n="middleInput.step3Label">Enter Production Result</div>
                     </div>
                 </div>
 
                 <div class="lz-retry-box" id="retryBox" style="display:none">
                     <div class="lz-retry-msg" id="retryMsg"></div>
                     <div class="t-actions" style="margin-top:10px">
-                        <button type="button" class="t-btn t-btn-primary" id="btnTryAgain" data-i18n="laser.tryAgainBtn">🔄 Try Again</button>
+                        <button type="button" class="t-btn t-btn-primary" id="btnTryAgain" data-i18n="middleInput.tryAgainBtn">🔄 Try Again</button>
                     </div>
-                    <button type="button" class="lz-skip-link" id="btnSkip" data-i18n="laser.skipBtn">Skip →</button>
+                    <button type="button" class="lz-skip-link" id="btnSkip" data-i18n="middleInput.skipBtn">Skip →</button>
                 </div>
             </div>
         </div>
@@ -369,12 +364,7 @@
 <script>
 (function () {
     const BASE = '@Url.Content("~")'.replace(/\/$/, '');
-    const LS_WO_KEY = 'backpanel_laser_wo';
-
-    // Bridge cục bộ chạy trên máy xưởng (cùng máy đang mở trang này) — server IIS trung
-    // tâm không với tới ổ đĩa máy xưởng nên việc ghi SN.txt phải do trình duyệt tự gọi
-    // bridge này, giống hệt cách in ZPL đang làm (xem wwwroot/js/print.js).
-    const NODE_SERVICE = 'http://localhost:8021';
+    const LS_WO_KEY = 'middle_inputresult_wo';
 
     function t(key, fallback) {
         return window.SakuraI18n ? window.SakuraI18n.t(key) : fallback;
@@ -388,13 +378,13 @@
     const $btnReset    = document.getElementById('btnReset');
     const $btnSave     = document.getElementById('btnSave');
 
-    const $serialNumber   = document.getElementById('serialNumber');
-    const $serialStatus   = document.getElementById('serialStatus');
-    const $laserCircle    = document.getElementById('laserCircle');
-    const $laserCircleTxt = document.getElementById('laserCircleText');
-    const $resultResolved = document.getElementById('resultResolved');
-    const $resScanned     = document.getElementById('resScanned');
-    const $resExpected    = document.getElementById('resExpected');
+    const $serialNumber    = document.getElementById('serialNumber');
+    const $serialStatus    = document.getElementById('serialStatus');
+    const $resultCircle    = document.getElementById('resultCircle');
+    const $resultCircleTxt = document.getElementById('resultCircleText');
+    const $resultResolved  = document.getElementById('resultResolved');
+    const $resScanned      = document.getElementById('resScanned');
+    const $resExpected     = document.getElementById('resExpected');
 
     const $retryBox     = document.getElementById('retryBox');
     const $retryMsg     = document.getElementById('retryMsg');
@@ -402,19 +392,20 @@
     const $btnSkip      = document.getElementById('btnSkip');
 
     let expectedColor = null; // Màu resolve được từ Work Order đang chọn
-    let expectedProductId = null; // product_id (số) của Work Order — dùng cho API bước 3 (CheckLotSerialFG/InputProductionResultLog)
-    let expectedQuantity = null; // Tổng số lượng (SN Label) của Work Order — dùng làm totalQuantity khi gọi API bước 3
+    let expectedProductId = null; // product_id (số) của Work Order — dùng cho bước 2/3
+    let expectedQuantity = null; // Tổng số lượng của WO — dùng làm totalQuantity ở bước 3
     let circleTimer = null; // Hẹn giờ tự tắt (về idle) sau khi hiện PASS/FAIL
 
-    // SN đang bị khoá chờ Try Again/Skip vì fail từ bước 2 trở đi (bước 1 fail thì
-    // không khoá — cho quét lại serial khác/serial đúng ngay, như hành vi cũ).
+    // SN đang bị khoá chờ Try Again/Skip vì fail ở bước 3 (bước 1/2 fail thì không khoá —
+    // cho quét lại serial khác/serial đúng ngay).
     let pendingSerial = null;
     let pendingFailedStep = null;
 
     // ── Process steps tracker: 1) Scan Color Check
-    //    2 (2.1) Check Serial Number Already Entered  3 (2.2) Enter Production Result
-    //    4 (3) Print Laser — in laser để cuối cùng, chỉ in khi check + nhập KQSX đã pass ──
-    const STEP_PENDING_TEXT = { 1: '1', 2: '2.1', 3: '2.2', 4: '3' };
+    //    2 (2.1) Check Serial Number Already Entered  3 (2.2) Enter Production Result.
+    //    Không có bước in vật lý như trạm Laser — verify-serial chạy xong bước 3 là chốt
+    //    PASS ngay, không cần chờ trình duyệt báo kết quả in về sau.
+    const STEP_PENDING_TEXT = { 1: '1', 2: '2.1', 3: '2.2' };
 
     function setStepState(n, state) {
         const $icon = document.getElementById(`step${n}Icon`);
@@ -435,29 +426,25 @@
         }
     }
     function resetSteps() {
-        setStepState(1, 'pending'); setStepState(2, 'pending');
-        setStepState(3, 'pending'); setStepState(4, 'pending');
+        setStepState(1, 'pending'); setStepState(2, 'pending'); setStepState(3, 'pending');
     }
 
     function stepLabel(n) {
-        if (n === 1) return t('laser.step1Label', 'Scan Color Check');
-        if (n === 2) return t('laser.step2Label', 'Check Serial Number Already Entered');
-        if (n === 3) return t('laser.step3Label', 'Enter Production Result');
-        if (n === 4) return t('laser.step4Label', 'Print Laser');
+        if (n === 1) return t('middleInput.step1Label', 'Scan Color Check');
+        if (n === 2) return t('middleInput.step2Label', 'Check Serial Number Already Entered');
+        if (n === 3) return t('middleInput.step3Label', 'Enter Production Result');
         return '';
     }
 
-    // Khoá ô Serial Number lại — bắt buộc phải Try Again (pass) hoặc Skip trước khi
-    // được quét serial tiếp theo, vì bước failedStep (>=2) chưa hoàn tất cho serial này.
-    // rawMessage (nếu có, vd từ API CheckLotSerialFG/InputProductionResultLog ở bước 3)
-    // được hiện nguyên văn thay cho câu chung chung, để vận hành viên biết chính xác lý do.
+    // Khoá ô Serial Number lại — bắt buộc phải Try Again (pass) hoặc Skip trước khi được
+    // quét serial tiếp theo, vì bước 3 (Enter Production Result) chưa hoàn tất cho serial này.
     function lockForRetry(serial, failedStep, rawMessage) {
         pendingSerial = serial;
         pendingFailedStep = failedStep;
         $serialNumber.disabled = true;
         $retryMsg.textContent = rawMessage
             ? `⚠ ${stepLabel(failedStep)} (SN ${serial}) — ${rawMessage}`
-            : `⚠ ${t('laser.stepIncomplete', 'Step not completed')} — ${stepLabel(failedStep)} (SN ${serial})`;
+            : `⚠ ${t('middleInput.stepIncomplete', 'Step not completed')} — ${stepLabel(failedStep)} (SN ${serial})`;
         $retryBox.style.display = 'flex';
     }
 
@@ -475,13 +462,12 @@
     function hideStatus(el) { el.className = 't-status'; }
 
     // API bên ngoài (CheckLotSerialFG/InputProductionResultLog) trả message thô bằng tiếng
-    // Anh, không qua i18n của app. Nhận diện các mẫu câu đã biết để dịch lại theo ngôn ngữ
-    // đang chọn (kèm tham số như serial/WO); câu lạ (API đổi format) thì hiện nguyên văn để
-    // không mất thông tin, thay vì cố dịch sai hoặc rơi mất chi tiết.
+    // Anh, không qua i18n của app — nhận diện mẫu câu đã biết để dịch lại theo ngôn ngữ
+    // đang chọn; câu lạ thì hiện nguyên văn để không mất thông tin.
     const API_MESSAGE_PATTERNS = [
         {
             regex: /Serial\/Lot\s+(\S+)\s+has been used for the WO\s+(\S+?)\.?\s*Please double-check\.?/i,
-            key: 'laser.msgSerialAlreadyUsed',
+            key: 'middleInput.msgSerialAlreadyUsed',
             fallback: 'Serial/Lot {serial} has already been entered for WO {wo}. Please double-check.',
             params: (m) => ({ serial: m[1], wo: m[2] })
         }
@@ -509,8 +495,7 @@
         return '';
     }
 
-    // API luôn trả tên màu tiếng Anh (Blue/Pink/Green) — dịch sang ngôn ngữ đang chọn
-    // (vd. tiếng Trung) để thông báo không bị lẫn tiếng Anh giữa câu.
+    // API luôn trả tên màu tiếng Anh (Blue/Pink/Green) — dịch sang ngôn ngữ đang chọn.
     function translateColor(colorName) {
         const cls = colorBadgeClass(colorName);
         if (!cls) return colorName || '—';
@@ -523,12 +508,11 @@
     }
 
     function setCircle(state, text) {
-        $laserCircle.className = 'lz-circle ' + state;
-        $laserCircleTxt.textContent = text;
+        $resultCircle.className = 'lz-circle ' + state;
+        $resultCircleTxt.textContent = text;
     }
 
-    // Hiện PASS/FAIL trong 3 giây rồi tự quay lại trạng thái chờ (idle) —
-    // không đụng tới $resultResolved (Scanned/Expected Color vẫn giữ nguyên để đối chiếu).
+    // Hiện PASS/FAIL trong 3 giây rồi tự quay lại trạng thái chờ (idle).
     function flashCircle(state, text) {
         if (circleTimer) { clearTimeout(circleTimer); circleTimer = null; }
         setCircle(state, text);
@@ -553,15 +537,15 @@
         resetResult();
 
         if (!wo) {
-            showStatus($woStatus, `✗ ${t('laser.woEnterFirst', 'Enter a Work Order first.')}`, 'err');
+            showStatus($woStatus, `✗ ${t('middleInput.woEnterFirst', 'Enter a Work Order first.')}`, 'err');
             return;
         }
 
-        showStatus($woStatus, `⏳ ${t('laser.woLookingUp', 'Looking up…')}`, 'ok');
+        showStatus($woStatus, `⏳ ${t('middleInput.woLookingUp', 'Looking up…')}`, 'ok');
         try {
-            const res = await fetch(`${BASE}/api/backpanel/laser/workorder-lookup?workOrder=${encodeURIComponent(wo)}`);
+            const res = await fetch(`${BASE}/api/middle/inputresult/workorder-lookup?workOrder=${encodeURIComponent(wo)}`);
             const body = await res.json();
-            if (!res.ok || !body.ok) throw new Error(window.SakuraI18n.translateApiError(body, t('laser.lookupFailed', 'Lookup failed.')));
+            if (!res.ok || !body.ok) throw new Error(window.SakuraI18n.translateApiError(body, t('middleInput.lookupFailed', 'Lookup failed.')));
 
             expectedColor = body.data.color;
             expectedProductId = body.data.productId;
@@ -601,55 +585,25 @@
     $btnSave.addEventListener('click', () => {
         const wo = $workOrder.value.trim();
         if (!wo) {
-            showStatus($woStatus, `✗ ${t('laser.woEnterFirst', 'Enter a Work Order first.')}`, 'err');
+            showStatus($woStatus, `✗ ${t('middleInput.woEnterFirst', 'Enter a Work Order first.')}`, 'err');
             return;
         }
         localStorage.setItem(LS_WO_KEY, wo);
-        showStatus($woStatus, `✓ ${t('laser.savedMsg', 'Work Order saved.')}`, 'ok');
+        showStatus($woStatus, `✓ ${t('middleInput.savedMsg', 'Work Order saved.')}`, 'ok');
     });
-
-    // ── Bước 4 (Print Laser) — ghi SN.txt qua bridge cục bộ, KHÔNG qua server ────
-    // Trả { ok: true } nếu bridge ghi thành công; { ok: false, message } nếu fail
-    // (bridge trả lỗi, hoặc không kết nối được localhost:8021).
-    async function writeSnFileViaBridge(serial) {
-        try {
-            const res = await fetch(`${NODE_SERVICE}/write-sn-file`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ serial }),
-                signal: AbortSignal.timeout(5000)
-            });
-            const data = await res.json();
-            if (!res.ok || !data.success) return { ok: false, message: data.error || t('laser.fileWriteFailed', 'Could not write file for laser — SN was not sent to print.') };
-            return { ok: true };
-        } catch (e) {
-            return { ok: false, message: t('laser.bridgeUnreachable', 'Could not connect to localhost:8021 — make sure the print bridge is running on this machine.') };
-        }
-    }
-
-    // Báo kết quả in laser về server để chốt Status/FailedStep của đúng dòng log (logId)
-    // vừa tạo ở verify-serial — best-effort, không chặn UI nếu server không phản hồi được.
-    async function reportPrintResult(logId, success) {
-        try {
-            await fetch(`${BASE}/api/backpanel/laser/report-print-result`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ logId, success })
-            });
-        } catch (e) { /* best-effort */ }
-    }
 
     // ── Serial Number verify ──────────────────────────────────────────────────
     // Gọi API verify-serial cho 1 serial cụ thể — dùng chung cho lần quét đầu tiên
-    // và cho nút Try Again (retry lại đúng serial đang bị khoá).
+    // và cho nút Try Again (retry lại đúng serial đang bị khoá). Không có bước in vật lý
+    // nên toàn bộ 3 bước (Scan Color Check / Check Already Entered / Enter Production
+    // Result) chạy đồng bộ trong 1 request — server trả PASS/FAIL ngay, không cần chờ gì thêm.
     async function runVerify(serial) {
         setStepState(1, 'pending');
         setStepState(2, 'pending');
         setStepState(3, 'pending');
-        setStepState(4, 'pending');
 
         try {
-            const res = await fetch(`${BASE}/api/backpanel/laser/verify-serial`, {
+            const res = await fetch(`${BASE}/api/middle/inputresult/verify-serial`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -658,69 +612,50 @@
                 })
             });
             const body = await res.json();
-            if (!res.ok || !body.ok) throw new Error(window.SakuraI18n.translateApiError(body, t('laser.verifyFailed', 'Verify failed.')));
+            if (!res.ok || !body.ok) throw new Error(window.SakuraI18n.translateApiError(body, t('middleInput.verifyFailed', 'Verify failed.')));
 
             $resScanned.textContent = translateColor(body.data.color);
             $resExpected.textContent = translateColor(body.data.expectedColor);
             $resultResolved.style.display = 'flex';
 
             if (body.data.match) {
-                // Result (vòng tròn PASS/FAIL) phản ánh KẾT QUẢ TOÀN BỘ quy trình (4 bước),
+                // Result (vòng tròn PASS/FAIL) phản ánh KẾT QUẢ TOÀN BỘ quy trình (3 bước),
                 // không chỉ riêng bước 1 — dù màu khớp, hễ còn 1 bước sau chưa qua thì vẫn là FAIL.
-                // Thứ tự: 1 Scan Color Check → 2 Check Already Entered → 3 Enter Production
-                // Result → 4 Print Laser (in laser để cuối, chỉ in khi 2+3 đã pass hết).
                 setStepState(1, 'done');
                 if (body.data.checkResultOk === false) {
                     // Serial đã được nhập KQSX trước đó (trùng) hoặc thiếu Product ID — đây là
                     // trạng thái vĩnh viễn với serial này (Try Again lại sẽ luôn ra kết quả y hệt),
                     // nên KHÔNG khoá — dịch message theo mẫu đã biết rồi cho quét Serial tiếp theo luôn.
                     setStepState(2, 'fail');
-                    flashCircle('fail', t('laser.fail', 'FAIL'));
-                    const checkMsg = translateApiRawMessage(body.data.checkResultMessage) || t('laser.step2Failed', 'Could not check production result status.');
-                    showStatus($serialStatus, `✗ ${t('laser.fail', 'FAIL')} — ${translateColor(body.data.color)} — ${checkMsg}`, 'err');
+                    flashCircle('fail', t('middleInput.fail', 'FAIL'));
+                    const checkMsg = translateApiRawMessage(body.data.checkResultMessage) || t('middleInput.step2Failed', 'Could not check production result status.');
+                    showStatus($serialStatus, `✗ ${t('middleInput.fail', 'FAIL')} — ${translateColor(body.data.color)} — ${checkMsg}`, 'err');
                     unlockRetry();
                 } else {
                     setStepState(2, 'done');
                     if (body.data.inputResultOk === false) {
-                        // API nhập kết quả sản xuất lỗi — dịch message theo mẫu đã biết.
-                        // Có thể thử lại (transient) nên khoá + cho Try Again.
+                        // API nhập kết quả sản xuất lỗi — có thể thử lại (transient) nên khoá + Try Again.
                         setStepState(3, 'fail');
-                        flashCircle('fail', t('laser.fail', 'FAIL'));
-                        const inputMsg = translateApiRawMessage(body.data.inputResultMessage) || t('laser.step3Failed', 'Could not enter production result.');
-                        showStatus($serialStatus, `✗ ${t('laser.fail', 'FAIL')} — ${translateColor(body.data.color)} — ${inputMsg}`, 'err');
+                        flashCircle('fail', t('middleInput.fail', 'FAIL'));
+                        const inputMsg = translateApiRawMessage(body.data.inputResultMessage) || t('middleInput.step3Failed', 'Could not enter production result.');
+                        showStatus($serialStatus, `✗ ${t('middleInput.fail', 'FAIL')} — ${translateColor(body.data.color)} — ${inputMsg}`, 'err');
                         lockForRetry(serial, 3, inputMsg);
                     } else {
                         setStepState(3, 'done');
-                        // Check + Nhập KQSX đã pass ở server — bước 4 (Print Laser) giờ do
-                        // TRÌNH DUYỆT (chạy trên máy xưởng) tự gọi bridge cục bộ để ghi SN.txt,
-                        // server IIS trung tâm không với tới ổ đĩa máy xưởng nên không tự ghi được.
-                        const printResult = await writeSnFileViaBridge(serial);
-                        await reportPrintResult(body.data.logId, printResult.ok);
-
-                        if (!printResult.ok) {
-                            // Check + Nhập KQSX đã pass, chỉ In Laser lỗi — khoá + cho Try Again
-                            // (server sẽ tự nhận diện, không nhập KQSX trùng lần nữa khi retry).
-                            setStepState(4, 'fail');
-                            flashCircle('fail', t('laser.fail', 'FAIL'));
-                            showStatus($serialStatus, `✗ ${t('laser.fail', 'FAIL')} — ${translateColor(body.data.color)} — ${printResult.message}`, 'err');
-                            lockForRetry(serial, 4, printResult.message);
-                        } else {
-                            setStepState(4, 'done');
-                            flashCircle('pass', t('laser.pass', 'PASS'));
-                            const subNameSuffix = body.data.subName ? ` (${body.data.subName})` : '';
-                            showStatus($serialStatus, `✓ ${t('laser.pass', 'PASS')} — ${translateColor(body.data.color)}${subNameSuffix}`, 'ok');
-                            unlockRetry();
-                        }
+                        flashCircle('pass', t('middleInput.pass', 'PASS'));
+                        const subNameSuffix = body.data.subName ? ` (${body.data.subName})` : '';
+                        showStatus($serialStatus, `✓ ${t('middleInput.pass', 'PASS')} — ${translateColor(body.data.color)}${subNameSuffix}`, 'ok');
+                        unlockRetry();
                     }
                 }
             } else {
-                flashCircle('fail', t('laser.fail', 'FAIL'));
+                flashCircle('fail', t('middleInput.fail', 'FAIL'));
                 setStepState(1, 'fail');
-                showStatus($serialStatus, `✗ ${t('laser.fail', 'FAIL')} — ${t('laser.scannedColor', 'Scanned Color')}: ${translateColor(body.data.color)}, ${t('laser.expectedColor', 'Expected Color')}: ${translateColor(body.data.expectedColor)}`, 'err');
+                showStatus($serialStatus, `✗ ${t('middleInput.fail', 'FAIL')} — ${t('middleInput.scannedColor', 'Scanned Color')}: ${translateColor(body.data.color)}, ${t('middleInput.expectedColor', 'Expected Color')}: ${translateColor(body.data.expectedColor)}`, 'err');
                 unlockRetry(); // Fail ở bước 1 không khoá — cho quét lại ngay.
             }
         } catch (e) {
-            flashCircle('fail', t('laser.fail', 'FAIL'));
+            flashCircle('fail', t('middleInput.fail', 'FAIL'));
             setStepState(1, 'fail');
             showStatus($serialStatus, `✗ ${e.message}`, 'err');
             unlockRetry();
@@ -736,11 +671,11 @@
         const serial = $serialNumber.value.trim();
 
         if (!serial) {
-            showStatus($serialStatus, `✗ ${t('laser.serialEnterFirst', 'Enter a Serial Number first.')}`, 'err');
+            showStatus($serialStatus, `✗ ${t('middleInput.serialEnterFirst', 'Enter a Serial Number first.')}`, 'err');
             return;
         }
         if (!expectedColor) {
-            showStatus($serialStatus, `✗ ${t('laser.scanWoFirst', 'Scan a Work Order first.')}`, 'err');
+            showStatus($serialStatus, `✗ ${t('middleInput.scanWoFirst', 'Scan a Work Order first.')}`, 'err');
             $serialNumber.value = '';
             return;
         }
@@ -752,17 +687,14 @@
         if (e.key === 'Enter') { e.preventDefault(); verifySerial(); }
     });
 
-    // ── Try Again / Skip (khi fail từ bước 2 trở đi) ─────────────────────────
+    // ── Try Again / Skip (khi fail ở bước 3) ─────────────────────────────────
     $btnTryAgain.addEventListener('click', async () => {
         if (!pendingSerial || !pendingFailedStep) return;
         const serial = pendingSerial;
 
         $btnTryAgain.disabled = true;
-        showStatus($serialStatus, `⏳ ${t('laser.retryInProgress', 'Retrying…')}`, 'ok');
+        showStatus($serialStatus, `⏳ ${t('middleInput.retryInProgress', 'Retrying…')}`, 'ok');
 
-        // Bước 2 (Print Laser) và bước 3 (Enter Production Result) đều là 1 phần của
-        // chuỗi verify-serial — gọi lại nguyên chuỗi cũng đồng thời retry các bước
-        // trước đó (luôn pass lại vì tất định/đã ghi file) rồi thử lại đúng bước đang fail.
         await runVerify(serial);
 
         $btnTryAgain.disabled = false;
@@ -771,7 +703,7 @@
     $btnSkip.addEventListener('click', () => {
         if (!pendingSerial) return;
         unlockRetry();
-        showStatus($serialStatus, `⚠ ${t('laser.skippedMsg', 'Skipped — you can scan the next Serial Number.')}`, 'err');
+        showStatus($serialStatus, `⚠ ${t('middleInput.skippedMsg', 'Skipped — you can scan the next Serial Number.')}`, 'err');
         $serialNumber.value = '';
         $serialNumber.focus();
     });

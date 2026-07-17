@@ -440,7 +440,7 @@
 
                 <div class="node-indicator">
                     <div class="node-dot" id="nodeDot"></div>
-                    <span id="nodeTxt">Service …</span>
+                    <span id="nodeTxt" data-i18n="snlabel.serviceChecking">Service …</span>
                 </div>
 
                 <!-- Toggle TCP / USB — same component as the /Print page -->
@@ -481,7 +481,7 @@
                             </select>
                             <div class="usb-status" id="usbStatus"></div>
                         </div>
-                        <button class="btn-icon" id="btnRefreshUsb" type="button" title="Rescan printers">
+                        <button class="btn-icon" id="btnRefreshUsb" type="button" data-i18n-title="snlabel.refreshUsbTitle" title="Rescan printers">
                             <span data-i18n="snlabel.refreshUsb">🔄 Refresh</span>
                         </button>
                     </div>
@@ -797,7 +797,7 @@
         try {
             const res = await fetch(`${BASE}/api/sakura/snlabel/workorder-lookup?workOrder=${encodeURIComponent(wo)}`);
             const body = await res.json();
-            if (!res.ok || !body.ok) throw new Error(window.SakuraI18n.translateApiError(body, 'Lookup failed.'));
+            if (!res.ok || !body.ok) throw new Error(window.SakuraI18n.translateApiError(body, t('snlabel.lookupFailed', 'Lookup failed.')));
 
             $variant.value = body.data.variant;
             updateColorDot();
@@ -825,7 +825,9 @@
             $woResolved.style.display = 'flex';
             woResolvedOk = true;
 
-            showStatus($woStatus, `✓ ${body.data.color} — ${body.data.remainingQuantity} pcs remaining.`, 'ok');
+            const lookupMsg = t('snlabel.woLookupSuccess', '{color} — {qty} pcs remaining.')
+                .replace('{color}', body.data.color).replace('{qty}', body.data.remainingQuantity);
+            showStatus($woStatus, `✓ ${lookupMsg}`, 'ok');
             loadStatus();
         } catch (e) {
             showStatus($woStatus, `✗ ${e.message}`, 'err');
@@ -869,7 +871,7 @@
         try {
             const res = await fetch(`${BASE}/api/sakura/snlabel/reprint?serialNumber=${encodeURIComponent(sn)}`);
             const body = await res.json();
-            if (!res.ok || !body.ok) throw new Error(window.SakuraI18n.translateApiError(body, 'Serial not found.'));
+            if (!res.ok || !body.ok) throw new Error(window.SakuraI18n.translateApiError(body, t('snlabel.serialNotFound', 'Serial not found.')));
 
             const zpl = body.data.zpl;
             const copies = parseInt($copies.value) || 1;
@@ -881,14 +883,14 @@
                 if (printerName) {
                     try {
                         for (let i = 0; i < copies; i++) await sendToBridgeUsb(zpl, printerName);
-                        msg += ` Sent to USB printer "${printerName}" (Local Bridge).`;
+                        msg += t('snlabel.sentToUsbPrinter', ' Sent to USB printer "{name}" (Local Bridge).').replace('{name}', printerName);
                     } catch (e) {
                         statusType = 'err';
-                        msg += ` ✗ Failed to send to printer: ${e.message}`;
+                        msg += t('snlabel.sendToPrinterFailed', ' ✗ Failed to send to printer: {error}').replace('{error}', e.message);
                     }
                 } else {
                     downloadZplFile(zpl, `reprint-${body.data.serialNumber}.zpl`);
-                    msg += ' No USB printer selected — downloaded .zpl file instead.';
+                    msg += t('snlabel.reprintNoUsbSelected', ' No USB printer selected — downloaded .zpl file instead.');
                 }
             } else {
                 const printerIp = $printerIp.value.trim();
@@ -896,14 +898,14 @@
                 if (printerIp) {
                     try {
                         for (let i = 0; i < copies; i++) await sendToBridge(zpl, printerIp, printerPort);
-                        msg += ` Sent to ${printerIp}:${printerPort} (Local Bridge).`;
+                        msg += t('snlabel.sentToTcpPrinter', ' Sent to {ip}:{port} (Local Bridge).').replace('{ip}', printerIp).replace('{port}', printerPort);
                     } catch (e) {
                         statusType = 'err';
-                        msg += ` ✗ Failed to send to printer: ${e.message}`;
+                        msg += t('snlabel.sendToPrinterFailed', ' ✗ Failed to send to printer: {error}').replace('{error}', e.message);
                     }
                 } else {
                     downloadZplFile(zpl, `reprint-${body.data.serialNumber}.zpl`);
-                    msg += ' No printer IP set — downloaded .zpl file instead.';
+                    msg += t('snlabel.reprintNoIpSet', ' No printer IP set — downloaded .zpl file instead.');
                 }
             }
             showStatus($reprintStatus, msg, statusType);
@@ -939,7 +941,7 @@
         localStorage.setItem(LS.ip, $printerIp.value.trim());
         localStorage.setItem(LS.port, $printerPort.value.trim());
         localStorage.setItem(LS.copies, $copies.value.trim());
-        showStatus($printStatus, '✓ Printer configuration saved.', 'ok');
+        showStatus($printStatus, t('snlabel.printerConfigSaved', '✓ Printer configuration saved.'), 'ok');
     });
 
     // Browser → local bridge (localhost:8021) → printer, same flow as Toast / FQC pages.
@@ -949,7 +951,7 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ zpl, printerIp, printerPort })
         });
-        if (!res.ok) throw new Error('Failed to send print job to Local Bridge.');
+        if (!res.ok) throw new Error(t('snlabel.bridgeSendFailed', 'Failed to send print job to Local Bridge.'));
     }
 
     // ── USB printing — same bridge endpoints as the /Print page ──────────────
@@ -971,7 +973,7 @@
     $lblUsb.addEventListener('click', () => setPrintMode('usb'));
 
     async function loadUsbPrinters() {
-        $usbSelect.innerHTML = '<option value="">⏳ Scanning…</option>';
+        $usbSelect.innerHTML = `<option value="">${t('snlabel.usbScanning', '⏳ Scanning…')}</option>`;
         $usbSelect.disabled = true;
         $usbStatus.textContent = '';
         $usbStatus.className = 'usb-status';
@@ -981,20 +983,20 @@
             const data = await r.json();
 
             if (!data.printers || data.printers.length === 0) {
-                $usbSelect.innerHTML = '<option value="">— No printer found —</option>';
-                $usbStatus.textContent = 'No USB printer detected.';
+                $usbSelect.innerHTML = `<option value="">${t('snlabel.usbNoPrinterFound', '— No printer found —')}</option>`;
+                $usbStatus.textContent = t('snlabel.usbNoPrinterDetected', 'No USB printer detected.');
                 $usbStatus.className = 'usb-status bad';
                 return;
             }
 
-            $usbSelect.innerHTML = '<option value="">— Select printer —</option>' +
+            $usbSelect.innerHTML = `<option value="">${t('snlabel.usbSelectPrinter', '— Select printer —')}</option>` +
                 data.printers.map(p => `<option value="${escHtml(p)}">${escHtml(p)}</option>`).join('');
             $usbSelect.disabled = false;
-            $usbStatus.textContent = `✓ Found ${data.printers.length} printer(s).`;
+            $usbStatus.textContent = t('snlabel.usbFoundCount', '✓ Found {n} printer(s).').replace('{n}', data.printers.length);
             $usbStatus.className = 'usb-status ok';
         } catch (err) {
-            $usbSelect.innerHTML = '<option value="">— Load error —</option>';
-            $usbStatus.textContent = 'Cannot connect to localhost:8021.';
+            $usbSelect.innerHTML = `<option value="">${t('snlabel.usbLoadError', '— Load error —')}</option>`;
+            $usbStatus.textContent = t('snlabel.usbCannotConnect', 'Cannot connect to localhost:8021.');
             $usbStatus.className = 'usb-status bad';
         }
     }
@@ -1007,14 +1009,14 @@
             const r = await fetch(`${NODE_SERVICE}/health`, { signal: AbortSignal.timeout(2500) });
             if (r.ok) {
                 $nodeDot.className = 'node-dot alive';
-                $nodeTxt.textContent = 'Service — Online';
+                $nodeTxt.textContent = t('snlabel.bridgeOnline', 'Service — Online');
                 bridgeOnline = true;
                 updatePrintButtonState();
                 return;
             }
         } catch { /* offline */ }
         $nodeDot.className = 'node-dot dead';
-        $nodeTxt.textContent = 'Service — Offline';
+        $nodeTxt.textContent = t('snlabel.bridgeOffline', 'Service — Offline');
         bridgeOnline = false;
         updatePrintButtonState();
     }
@@ -1029,7 +1031,7 @@
         });
         const data = await res.json().catch(() => null);
         if (!res.ok || !data || data.success === false) {
-            throw new Error((data && data.error) || 'Failed to send print job to Local Bridge (USB).');
+            throw new Error((data && data.error) || t('snlabel.bridgeSendFailedUsb', 'Failed to send print job to Local Bridge (USB).'));
         }
     }
 
@@ -1042,7 +1044,7 @@
         try {
             const res = await fetch(`${BASE}/api/sakura/snlabel/status?${params}`);
             const body = await res.json();
-            if (!res.ok || !body.ok) throw new Error(window.SakuraI18n.translateApiError(body, 'Failed to load status.'));
+            if (!res.ok || !body.ok) throw new Error(window.SakuraI18n.translateApiError(body, t('snlabel.statusLoadFailed', 'Failed to load status.')));
             renderStatus(body.data);
         } catch (e) {
             $stLast.textContent = '—';
@@ -1055,7 +1057,7 @@
 
     function renderStatus(data) {
         lastStatusData = data;
-        $stLast.textContent = data.lastSerial || 'None yet';
+        $stLast.textContent = data.lastSerial || t('snlabel.noneYet', 'None yet');
         $stNext.textContent = data.nextSerial || '—';
         $stCount.textContent = data.count;
         $stRemaining.textContent = data.remainingCapacity.toLocaleString();
@@ -1067,7 +1069,7 @@
                 <div class="snl-summary-card${active}">
                     <div class="name"><span class="swatch-dot ${meta.cls}"></span>${meta.name}</div>
                     <div class="count">${s.count}</div>
-                    <div class="last">${s.lastSerial || 'none yet'}</div>
+                    <div class="last">${s.lastSerial || t('snlabel.noneYet', 'None yet')}</div>
                 </div>`;
         }).join('');
     }
@@ -1097,7 +1099,8 @@
         const maxQty = entryMode === 'wo' ? (parseInt($quantity.max) || WORKORDER_MAX_QUANTITY) : MANUAL_MAX_QUANTITY;
         const qty = parseInt($quantity.value) || 0;
         if (qty < 1 || qty > maxQty) {
-            showStatus($printStatus, `✗ Quantity must be between 1 and ${maxQty}.`, 'err');
+            const rangeMsg = t('snlabel.quantityRange', 'Quantity must be between 1 and {max}.').replace('{max}', maxQty);
+            showStatus($printStatus, `✗ ${rangeMsg}`, 'err');
             return;
         }
 
@@ -1115,7 +1118,7 @@
                 })
             });
             const body = await res.json();
-            if (!res.ok || body.ok === false) throw new Error(window.SakuraI18n.translateApiError(body, 'Print failed.'));
+            if (!res.ok || body.ok === false) throw new Error(window.SakuraI18n.translateApiError(body, t('snlabel.printFailed', 'Print failed.')));
 
             lastZpl = body.zpl;
             lastBatchId = body.batchId;
@@ -1125,7 +1128,7 @@
                 `<div><span class="idx">${String(i + 1).padStart(3, '0')}</span><span>${s.serialNumber}</span></div>`
             ).join('');
 
-            let msg = `✓ Generated ${body.serials.length} serial(s).`;
+            let msg = `✓ ${t('snlabel.generatedSerialsMsg', 'Generated {n} serial(s).').replace('{n}', body.serials.length)}`;
             let statusType = 'ok';
 
             const copies = parseInt($copies.value) || 1;
@@ -1137,14 +1140,14 @@
                         for (let i = 0; i < copies; i++) {
                             await sendToBridgeUsb(lastZpl, printerName);
                         }
-                        msg += ` Sent to USB printer "${printerName}" (Local Bridge).`;
+                        msg += t('snlabel.sentToUsbPrinter', ' Sent to USB printer "{name}" (Local Bridge).').replace('{name}', printerName);
                     } catch (e) {
                         statusType = 'err';
-                        msg += ` ✗ Failed to send to printer: ${e.message}`;
+                        msg += t('snlabel.sendToPrinterFailed', ' ✗ Failed to send to printer: {error}').replace('{error}', e.message);
                     }
                 } else {
                     downloadZplFile(lastZpl, `sn-labels-${lastBatchId}.zpl`);
-                    msg += ' No USB printer selected — downloaded .zpl file instead. Scan and select a USB printer above to print directly next time.';
+                    msg += t('snlabel.printNoUsbSelected', ' No USB printer selected — downloaded .zpl file instead. Scan and select a USB printer above to print directly next time.');
                 }
             } else {
                 const printerIp = $printerIp.value.trim();
@@ -1156,19 +1159,19 @@
                         for (let i = 0; i < copies; i++) {
                             await sendToBridge(lastZpl, printerIp, printerPort);
                         }
-                        msg += ` Sent to ${printerIp}:${printerPort} (Local Bridge).`;
+                        msg += t('snlabel.sentToTcpPrinter', ' Sent to {ip}:{port} (Local Bridge).').replace('{ip}', printerIp).replace('{port}', printerPort);
                     } catch (e) {
                         statusType = 'err';
-                        msg += ` ✗ Failed to send to printer: ${e.message}`;
+                        msg += t('snlabel.sendToPrinterFailed', ' ✗ Failed to send to printer: {error}').replace('{error}', e.message);
                     }
                 } else if (body.printMode === 'DirectTcp') {
                     msg += body.directPrintSent
-                        ? ' Sent directly from server to printer.'
-                        : ` Direct send failed: ${body.directPrintError || 'unknown error'}.`;
+                        ? t('snlabel.directSendSuccess', ' Sent directly from server to printer.')
+                        : t('snlabel.directSendFailed', ' Direct send failed: {error}.').replace('{error}', body.directPrintError || t('snlabel.unknownError', 'unknown error'));
                     statusType = body.directPrintSent === false ? 'err' : 'ok';
                 } else {
                     downloadZplFile(lastZpl, `sn-labels-${lastBatchId}.zpl`);
-                    msg += ' No printer IP set — downloaded .zpl file instead. Fill in the printer IP above to print directly via Local Bridge next time.';
+                    msg += t('snlabel.printNoIpSet', ' No printer IP set — downloaded .zpl file instead. Fill in the printer IP above to print directly via Local Bridge next time.');
                 }
             }
             showStatus($printStatus, msg, statusType);

@@ -108,6 +108,21 @@ public class SakuraService
         return VariantColorMap.TryGetValue(variant, out var color) ? color : null;
     }
 
+    // SN quét vào trạm Middle bị cắt mất 4 ký tự đầu "RM15" so với serial đầy đủ ở trạm
+    // Laser/Back Panel — chỉ còn "A" + variant(2) + year(1) + day(3) + line(1) + running(3)
+    // = 11 ký tự. Vị trí variant (ngay sau "A") không đổi, chỉ khác độ dài/model prefix.
+    private const string MiddleModel = "A";
+
+    public static string? TryResolveColorFromMiddleSerial(string serial)
+    {
+        if (string.IsNullOrWhiteSpace(serial)) return null;
+        string s = serial.Trim().ToUpperInvariant();
+        if (s.Length != 11 || !s.StartsWith(MiddleModel)) return null;
+
+        string variant = s.Substring(MiddleModel.Length, 2);
+        return VariantColorMap.TryGetValue(variant, out var color) ? color : null;
+    }
+
     // ── Serial number formatting ─────────────────────────────────────────────
 
     public static string BuildSerial(string variant, DateTime productionDate, string line, string runningNumber)

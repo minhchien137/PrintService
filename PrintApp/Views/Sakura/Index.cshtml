@@ -230,7 +230,7 @@
                     <div class="sk-group-items">
                         @foreach (var item in group.Items!)
                         {
-                            <a class="sk-group-item" href="@item.Href">
+                            <a class="sk-group-item" href="@item.Href" target="@(item.OpenInNewTab ? "_blank" : null)" rel="@(item.OpenInNewTab ? "noopener noreferrer" : null)">
                                 <span class="icon">@item.Icon</span>
                                 <span class="txt">
                                     <div class="name" data-i18n="tile.@(item.Key).title">@item.Title</div>
@@ -249,7 +249,7 @@
             {
                 if (tile.Enabled && !string.IsNullOrEmpty(tile.Href))
                 {
-                    <a class="sk-app-tile" href="@tile.Href">
+                    <a class="sk-app-tile" href="@tile.Href" target="@(tile.OpenInNewTab ? "_blank" : null)" rel="@(tile.OpenInNewTab ? "noopener noreferrer" : null)">
                         <div class="sk-app-icon">@tile.Icon</div>
                         <div class="name" data-i18n="tile.@(tile.Key).title">@tile.Title</div>
                         <div class="desc" data-i18n="tile.@(tile.Key).desc">@tile.Subtitle</div>
@@ -267,7 +267,7 @@
         </div>
     </div>
 
-    <div class="sk-footer" data-i18n="home.footer">Sakura Toolkit — Zebra ZPL Print Service</div>
+    <div class="sk-footer" data-i18n="home.footer">Designed by SVN IT</div>
 
 </div>
 

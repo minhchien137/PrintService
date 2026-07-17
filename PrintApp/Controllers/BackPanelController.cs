@@ -108,7 +108,7 @@ public class BackPanelController : Controller
             // báo "đã nhập" (vì đúng là đã nhập thật), kẹt vĩnh viễn không bao giờ in được.
             string? priorSubName = await _db.BackPanelLaserLogs
                 .Where(x => x.WorkOrder == workOrder && x.SerialNumber == serial
-                    && (x.Status == "NG" || x.Status == "PENDING") && x.ProductionResultSubName != null)
+                    && (x.Status == "FAIL" || x.Status == "PENDING") && x.ProductionResultSubName != null)
                 .OrderByDescending(x => x.Id)
                 .Select(x => x.ProductionResultSubName)
                 .FirstOrDefaultAsync();
@@ -129,7 +129,7 @@ public class BackPanelController : Controller
                 if (checkResult.Ok)
                 {
                     // Query tính subName đôi khi gặp lỗi ngắt quãng (mất kết nối/lock tạm thời
-                    // tới SQL Server) — thử lại vài lần trước khi bỏ cuộc, thay vì báo NG ngay
+                    // tới SQL Server) — thử lại vài lần trước khi bỏ cuộc, thay vì báo FAIL ngay
                     // từ lần lỗi đầu tiên. KHÔNG được tự đoán subName khi hết lượt thử vẫn lỗi.
                     const int maxAttempts = 3;
                     Exception? lastEx = null;
@@ -182,8 +182,8 @@ public class BackPanelController : Controller
             : (checkResultOk == false ? 2
             : (inputResultOk == false ? 3 : (int?)null));
         // "PENDING" = check + nhập KQSX đã pass, đang chờ trình duyệt in laser + báo kết quả
-        // qua ReportPrintResult. Chỉ "NG" khi fail hẳn ở bước 1-3 (bước 4 chưa biết kết quả).
-        string status = failedStep != null ? "NG" : "PENDING";
+        // qua ReportPrintResult. Chỉ "FAIL" khi fail hẳn ở bước 1-3 (bước 4 chưa biết kết quả).
+        string status = failedStep != null ? "FAIL" : "PENDING";
 
         int logId;
         try
@@ -239,7 +239,7 @@ public class BackPanelController : Controller
         if (entry == null)
             return NotFound(new { ok = false, error = $"Không tìm thấy log Id={req.LogId}.", errorCode = "common.missingData" });
 
-        entry.Status = req.Success ? "PASS" : "NG";
+        entry.Status = req.Success ? "PASS" : "FAIL";
         entry.FailedStep = req.Success ? null : 4;
         await _db.SaveChangesAsync();
 
