@@ -1,11 +1,11 @@
 @{
-    ViewData["Title"] = "SN Label History — Sakura";
+    ViewData["Title"] = "Input Result History — Middle";
 }
 
 <style>
     @@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Barlow:wght@600;700;800&display=swap');
 
-    /* ── Sigma Red design tokens — shared across all Sakura pages ─────────── */
+    /* ── Sigma Red design tokens — shared across all Sakura-family pages ──── */
     :root {
         --red:        #C8102E;
         --red-dark:   #9B0B22;
@@ -28,10 +28,6 @@
         --shadow-lg:  0 8px 40px rgba(200,16,46,0.18);
         --font-body:  'Inter', sans-serif;
         --font-head:  'Barlow', sans-serif;
-
-        --sn-blue: #2f5ea8;
-        --sn-pink: #c15b83;
-        --sn-green: var(--success);
     }
 
     body {
@@ -46,17 +42,8 @@
 
     .snl-page { max-width: 1040px; margin: 0 auto; position: relative; z-index: 1; }
 
-    .snl-header {
-        display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        margin-bottom: 28px;
-    }
+    .snl-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 28px; }
     .snl-header h1 { font-family: var(--font-head); font-size: 26px; font-weight: 800; letter-spacing: -0.3px; color: var(--red-dark); }
-    .snl-header p {
-        font-family: var(--font-body); font-size: 0.85rem;
-        color: var(--gray-500); margin-top: 5px;
-    }
     .snl-header .accent-bar {
         display: block; width: 40px; height: 4px; border-radius: 4px; margin-top: 12px;
         background: linear-gradient(90deg, var(--red-dark), var(--red-mid));
@@ -80,7 +67,7 @@
     .t-section-label::after { content: ''; flex: 1; height: 1px; background: var(--gray-200); }
 
     .t-grid { display: grid; gap: 16px 20px; }
-    .t-grid-auto { grid-template-columns: 170px 1fr 1fr 120px auto; align-items: end; }
+    .t-grid-auto { grid-template-columns: 1fr 1fr 120px auto; align-items: end; }
 
     .t-field label {
         display: block; font-family: var(--font-body); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.5px;
@@ -106,6 +93,8 @@
     }
     .t-btn-ghost { background: var(--white); color: var(--gray-500); border: 1.5px solid var(--gray-200); }
     .t-btn-ghost:hover { border-color: var(--red); color: var(--red); background: var(--red-xlight); }
+    .t-btn-ghost:disabled { opacity: 0.4; cursor: not-allowed; }
+    .t-btn-ghost:disabled:hover { border-color: var(--gray-200); color: var(--gray-500); background: var(--white); }
 
     .t-table { width: 100%; border-collapse: collapse; font-family: var(--font-body); font-size: 0.85rem; }
     .t-table th {
@@ -115,37 +104,26 @@
     .t-table td { padding: 8px 10px; border-bottom: 1px dashed var(--gray-200); vertical-align: middle; }
     .t-table tr:hover td { background: var(--gray-50); }
 
-    /* Reprinted rows — highlighted so operators can spot re-printed labels at a glance */
-    .t-table tr.reprinted td { background: rgba(217, 119, 6, 0.08); border-bottom-color: rgba(217, 119, 6, 0.25); }
-    .t-table tr.reprinted:hover td { background: rgba(217, 119, 6, 0.14); }
-    .reprint-badge {
-        display: inline-flex; align-items: center; gap: 3px; margin-left: 8px;
-        font-family: var(--font-body); font-size: 0.65rem; font-weight: 700; letter-spacing: 0.2px;
-        color: #92400E; background: rgba(217, 119, 6, 0.14);
-        border: 1px solid rgba(217, 119, 6, 0.35);
-        padding: 1px 8px; border-radius: 10px; white-space: nowrap;
+    /* ── PASS / FAIL status badge ───────────────────────────────────────────── */
+    .status-badge {
+        display: inline-flex; align-items: center; gap: 4px;
+        font-family: var(--font-body); font-size: 0.7rem; font-weight: 700; letter-spacing: 0.3px;
+        padding: 3px 10px; border-radius: 10px; text-transform: uppercase;
     }
+    .status-badge.pass { color: #065F46; background: #ECFDF5; border: 1px solid rgba(5,150,105,0.35); }
+    .status-badge.fail { color: #7F1D1D; background: var(--red-xlight); border: 1px solid rgba(220,38,38,0.35); }
 
-    .swatch-dot {
-        width: 13px; height: 13px; border-radius: 50%; flex-shrink: 0; display: inline-block;
-        vertical-align: middle; margin-right: 6px;
-        border: 1.5px solid rgba(0,0,0,0.15);
+    /* ── Failed-step indicator ──────────────────────────────────────────────── */
+    .failstep-badge {
+        display: inline-flex; align-items: center; gap: 5px;
+        font-family: var(--font-body); font-size: 0.75rem; font-weight: 600; color: var(--red-dark);
     }
-    .swatch-dot.blue  { background: var(--sn-blue); }
-    .swatch-dot.pink  { background: var(--sn-pink); }
-    .swatch-dot.green { background: var(--sn-green); }
+    .failstep-none { color: var(--gray-400); }
 
     /* Pagination footer */
-    .hist-pagination {
-        display: flex; align-items: center; justify-content: space-between;
-        margin-top: 16px; flex-wrap: wrap; gap: 10px;
-    }
-    .hist-pagination .info {
-        font-family: var(--font-body); font-size: 0.75rem; color: var(--gray-500); letter-spacing: 0.3px;
-    }
+    .hist-pagination { display: flex; align-items: center; justify-content: space-between; margin-top: 16px; flex-wrap: wrap; gap: 10px; }
+    .hist-pagination .info { font-family: var(--font-body); font-size: 0.75rem; color: var(--gray-500); letter-spacing: 0.3px; }
     .hist-pagination .pages { display: flex; align-items: center; gap: 10px; }
-    .t-btn-ghost:disabled { opacity: 0.4; cursor: not-allowed; }
-    .t-btn-ghost:disabled:hover { border-color: var(--gray-200); color: var(--gray-500); background: var(--white); }
 
     @@media (max-width: 900px) {
         .t-grid-auto { grid-template-columns: 1fr 1fr; }
@@ -154,7 +132,7 @@
         .t-grid-auto { grid-template-columns: 1fr; }
     }
 
-    /* ── Language switcher — fixed top-right, shared across all Sakura pages ── */
+    /* ── Language switcher — fixed top-right, shared across all app pages ── */
     .sk-lang-switch {
         position: fixed; top: 18px; right: 22px; z-index: 100;
         display: flex; gap: 8px;
@@ -177,38 +155,31 @@
     }
 </style>
 
-@await Html.PartialAsync("_LangSwitcher")
+@await Html.PartialAsync("~/Views/Sakura/_LangSwitcher.cshtml")
 
 <div class="snl-page">
 
     <header class="snl-header">
         <div>
-            <h1 data-i18n="history.title">SN LABEL HISTORY</h1>
-            <p data-i18n="history.subtitle">Serial Number Print — Sakura</p>
+            <h1 data-i18n="middleInputHistory.title">INPUT RESULT HISTORY</h1>
             <span class="accent-bar"></span>
         </div>
-        <div class="snl-badge">SAKURA</div>
+        <div class="snl-badge">MIDDLE</div>
     </header>
 
     <div class="t-section">
-        <div class="t-section-label" data-i18n="history.filter">Filter</div>
+        <div class="t-section-label" data-i18n="middleInputHistory.filter">Filter</div>
         <div class="t-grid t-grid-auto">
             <div class="t-field">
-                <label data-i18n="history.prodDate">Production Date</label>
-                <input type="date" id="histDate" />
+                <label data-i18n="middleInputHistory.filterWorkOrder">Work Order</label>
+                <input type="text" id="histWorkOrder" autocomplete="off" data-i18n-placeholder="middleInputHistory.filterWorkOrderPlaceholder" placeholder="Search Work Order…" />
             </div>
             <div class="t-field">
-                <label data-i18n="history.filterSerial">Serial Number</label>
-                <input type="text" id="histSerial" autocomplete="off" data-i18n-placeholder="history.filterSerialPlaceholder" placeholder="Search Serial Number…" />
+                <label data-i18n="middleInputHistory.filterSerial">Serial Number</label>
+                <input type="text" id="histSerial" autocomplete="off" data-i18n-placeholder="middleInputHistory.filterSerialPlaceholder" placeholder="Search Serial Number…" />
             </div>
             <div class="t-field">
-                <label data-i18n="history.filterWorkOrder">Work Order</label>
-                <select id="histWorkOrder">
-                    <option value="" data-i18n="history.filterWorkOrderAll">— All —</option>
-                </select>
-            </div>
-            <div class="t-field">
-                <label data-i18n="history.pageSize">Records / Page</label>
+                <label data-i18n="middleInputHistory.pageSize">Records / Page</label>
                 <select id="histPageSize">
                     <option value="10">10</option>
                     <option value="20" selected>20</option>
@@ -216,46 +187,44 @@
                     <option value="100">100</option>
                 </select>
             </div>
-            <button class="t-btn t-btn-ghost" id="btnHistRefresh" data-i18n="history.refresh">↻ Refresh</button>
+            <button class="t-btn t-btn-ghost" id="btnHistRefresh" data-i18n="middleInputHistory.refresh">↻ Refresh</button>
         </div>
     </div>
 
     <div class="t-section">
-        <div class="t-section-label" data-i18n="history.printedSerials">Printed Serials</div>
+        <div class="t-section-label" data-i18n="middleInputHistory.tableTitle">Scan Log</div>
         <table class="t-table">
             <thead>
                 <tr>
-                    <th data-i18n="history.colSerial">Serial</th>
-                    <th data-i18n="history.colColor">Color</th>
-                    <th data-i18n="history.colLine">Line</th>
-                    <th data-i18n="history.colWorkOrder">Work Order</th>
-                    <th data-i18n="history.colPrintedAt">Printed At</th>
+                    <th data-i18n="middleInputHistory.colWorkOrder">Work Order</th>
+                    <th data-i18n="middleInputHistory.colSerial">Serial Number</th>
+                    <th data-i18n="middleInputHistory.colStatus">Status</th>
+                    <th data-i18n="middleInputHistory.colFailedStep">Failed At</th>
+                    <th data-i18n="middleInputHistory.colFailReason">Reason</th>
+                    <th data-i18n="middleInputHistory.colSubName">Sub Name</th>
+                    <th data-i18n="middleInputHistory.colTimeline">Timeline</th>
                 </tr>
             </thead>
             <tbody id="histRows">
-                <tr><td colspan="5" style="text-align:center;color:var(--ghost);padding:16px">—</td></tr>
+                <tr><td colspan="7" style="text-align:center;color:var(--gray-500);padding:16px">—</td></tr>
             </tbody>
         </table>
 
         <div class="hist-pagination">
             <div class="info" id="histPageInfo">—</div>
             <div class="pages">
-                <button class="t-btn t-btn-ghost" id="btnHistFirst" data-i18n-title="history.firstPage" title="First page">⏮</button>
-                <button class="t-btn t-btn-ghost" id="btnHistPrev" data-i18n="history.prevPage">← Prev</button>
-                <button class="t-btn t-btn-ghost" id="btnHistNext" data-i18n="history.nextPage">Next →</button>
-                <button class="t-btn t-btn-ghost" id="btnHistLast" data-i18n-title="history.lastPage" title="Last page">⏭</button>
+                <button class="t-btn t-btn-ghost" id="btnHistFirst" data-i18n-title="middleInputHistory.firstPage" title="First page">⏮</button>
+                <button class="t-btn t-btn-ghost" id="btnHistPrev" data-i18n="middleInputHistory.prevPage">← Prev</button>
+                <button class="t-btn t-btn-ghost" id="btnHistNext" data-i18n="middleInputHistory.nextPage">Next →</button>
+                <button class="t-btn t-btn-ghost" id="btnHistLast" data-i18n-title="middleInputHistory.lastPage" title="Last page">⏭</button>
             </div>
         </div>
     </div>
 
     <div style="display:flex;gap:18px">
-        <a href="@Url.Content("~/sakura")" data-i18n="history.backHome" style="font-family:var(--mono);font-size:11px;color:var(--ghost);
-            letter-spacing:1px;text-decoration:none;border-bottom:1px solid var(--rule);">
-            ← Sakura Home
-        </a>
-        <a href="@Url.Content("~/sakura/snlabel")" data-i18n="history.backSnLabel" style="font-family:var(--mono);font-size:11px;color:var(--ghost);
-            letter-spacing:1px;text-decoration:none;border-bottom:1px solid var(--rule);">
-            ← Back to SN Label Print
+        <a href="@Url.Content("~/middle/inputresult")" data-i18n="middleInputHistory.backInputResult" style="font-family:var(--font-body);font-size:11px;color:var(--gray-500);
+            letter-spacing:0.5px;text-decoration:none;border-bottom:1px solid var(--gray-200);">
+            ← Back to Input Result
         </a>
     </div>
 
@@ -268,89 +237,40 @@
 (function () {
     const BASE = '@Url.Content("~")'.replace(/\/$/, '');
 
-    // t() reads the current language live via SakuraI18n — keeps this table in
-    // sync with whichever flag (EN/ZH) is selected.
     function t(key, fallback) {
         return window.SakuraI18n ? window.SakuraI18n.t(key) : fallback;
     }
 
-    function escHtml(str) {
-        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    }
-
-    const COLOR_META = {
-        '00': { get name() { return t('color.blue',  'Blue');  }, cls: 'blue'  },
-        '01': { get name() { return t('color.pink',  'Pink');  }, cls: 'pink'  },
-        '02': { get name() { return t('color.green', 'Green'); }, cls: 'green' }
-    };
-
-    const $histDate = document.getElementById('histDate');
-    const $histSerial = document.getElementById('histSerial');
-    const $histWorkOrder = document.getElementById('histWorkOrder');
-    const $histPageSize = document.getElementById('histPageSize');
+    const $histWorkOrder  = document.getElementById('histWorkOrder');
+    const $histSerial     = document.getElementById('histSerial');
+    const $histPageSize   = document.getElementById('histPageSize');
     const $btnHistRefresh = document.getElementById('btnHistRefresh');
-    const $histRows = document.getElementById('histRows');
-    const $histPageInfo = document.getElementById('histPageInfo');
-    const $btnHistFirst = document.getElementById('btnHistFirst');
-    const $btnHistPrev = document.getElementById('btnHistPrev');
-    const $btnHistNext = document.getElementById('btnHistNext');
-    const $btnHistLast = document.getElementById('btnHistLast');
+    const $histRows       = document.getElementById('histRows');
+    const $histPageInfo   = document.getElementById('histPageInfo');
+    const $btnHistFirst   = document.getElementById('btnHistFirst');
+    const $btnHistPrev    = document.getElementById('btnHistPrev');
+    const $btnHistNext    = document.getElementById('btnHistNext');
+    const $btnHistLast    = document.getElementById('btnHistLast');
 
     let currentPage = 1;
     let lastTotalCount = 0;
-
-    function todayStr() {
-        const d = new Date();
-        const pad = n => String(n).padStart(2, '0');
-        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-    }
-
-    // Both line identifiers (0, 1) belong to the same physical line: "Golden line".
-    // Reuses the same translation keys as the Line dropdown on the SN Label Print page.
-    function lineLabel(line) {
-        const key = line === 1 || line === '1' ? 'line.opt1' : 'line.opt0';
-        return t(key, `${line} — Golden line`);
-    }
-
     let lastRows = null;
 
     function pageSize() {
         return parseInt($histPageSize.value) || 20;
     }
 
-    // Đổ lại dropdown Work Order theo đúng ngày đang chọn — vd ngày 9 có 3 WO thì
-    // dropdown chỉ hiện đúng 3 WO đó. Nếu bỏ trống ngày, hiện tất cả WO đã từng in.
-    async function loadWorkOrderOptions() {
-        const prevValue = $histWorkOrder.value;
-        const params = new URLSearchParams();
-        if ($histDate.value) params.set('date', $histDate.value);
-
-        try {
-            const res = await fetch(`${BASE}/api/sakura/snlabel/workorders?${params}`);
-            const body = await res.json();
-            if (!res.ok || !body.ok) throw new Error(window.SakuraI18n.translateApiError(body, t('history.loadWorkOrdersFailed', 'Failed to load Work Orders.')));
-
-            const options = body.data || [];
-            $histWorkOrder.innerHTML = `<option value="" data-i18n="history.filterWorkOrderAll">${t('history.filterWorkOrderAll', '— All —')}</option>` +
-                options.map(wo => `<option value="${escHtml(wo)}">${escHtml(wo)}</option>`).join('');
-            // Giữ lại lựa chọn cũ nếu vẫn còn hợp lệ cho ngày mới, không thì về "All".
-            $histWorkOrder.value = options.includes(prevValue) ? prevValue : '';
-        } catch (e) {
-            $histWorkOrder.innerHTML = `<option value="" data-i18n="history.filterWorkOrderAll">${t('history.filterWorkOrderAll', '— All —')}</option>`;
-        }
-    }
-
     async function loadHistory() {
         const params = new URLSearchParams({ page: currentPage, pageSize: pageSize() });
-        if ($histDate.value) params.set('date', $histDate.value);
+        if ($histWorkOrder.value.trim()) params.set('workOrder', $histWorkOrder.value.trim());
         if ($histSerial.value.trim()) params.set('serialNumber', $histSerial.value.trim());
-        if ($histWorkOrder.value) params.set('workOrder', $histWorkOrder.value);
 
-        $histRows.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--ghost);padding:16px">${t('history.loading', 'Loading…')}</td></tr>`;
+        $histRows.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--gray-500);padding:16px">${t('middleInputHistory.loading', 'Loading…')}</td></tr>`;
         try {
-            const res = await fetch(`${BASE}/api/sakura/snlabel/history?${params}`);
+            const res = await fetch(`${BASE}/api/middle/inputresult/history?${params}`);
             const body = await res.json();
-            if (!res.ok || !body.ok) throw new Error(window.SakuraI18n.translateApiError(body, t('history.loadHistoryFailed', 'Failed to load history.')));
+            if (!res.ok || !body.ok) throw new Error(window.SakuraI18n.translateApiError(body, t('middleInputHistory.loadFailed', 'Failed to load history.')));
+
             lastRows = body.data.items;
             lastTotalCount = body.data.totalCount;
             currentPage = body.data.page;
@@ -359,7 +279,7 @@
         } catch (e) {
             lastRows = null;
             lastTotalCount = 0;
-            $histRows.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--stamp);padding:16px">✗ ${e.message}</td></tr>`;
+            $histRows.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--danger);padding:16px">✗ ${e.message}</td></tr>`;
             renderPagination();
         }
     }
@@ -367,8 +287,8 @@
     function renderPagination() {
         const totalPages = Math.max(1, Math.ceil(lastTotalCount / pageSize()));
         $histPageInfo.textContent = lastTotalCount === 0
-            ? t('history.noData', 'No data yet.')
-            : `${t('history.page', 'Page')} ${currentPage} / ${totalPages} — ${lastTotalCount} ${t('history.records', 'records')}`;
+            ? t('middleInputHistory.noData', 'No data yet.')
+            : `${t('middleInputHistory.page', 'Page')} ${currentPage} / ${totalPages} — ${lastTotalCount} ${t('middleInputHistory.records', 'records')}`;
         $btnHistFirst.disabled = currentPage <= 1;
         $btnHistPrev.disabled = currentPage <= 1;
         $btnHistNext.disabled = currentPage >= totalPages;
@@ -398,54 +318,63 @@
         loadHistory();
     });
 
+    // Tên/số hiển thị các bước trong quy trình InputResult — dùng chung key i18n với
+    // trang InputResult. Chỉ 3 bước (không có bước in vật lý như trạm Laser).
+    const STEP_DISPLAY_NUMBER = { 1: '1', 2: '2.1', 3: '2.2' };
+
+    function stepLabel(n) {
+        if (n === 1) return t('middleInput.step1Label', 'Scan Color Check');
+        if (n === 2) return t('middleInput.step2Label', 'Check Serial Number Already Entered');
+        if (n === 3) return t('middleInput.step3Label', 'Enter Production Result');
+        return '—';
+    }
+
+    function escapeHtml(s) {
+        return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
     function renderHistory(rows) {
         if (!rows.length) {
-            $histRows.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--ghost);padding:16px">${t('history.noData', 'No data yet.')}</td></tr>`;
+            $histRows.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--gray-500);padding:16px">${t('middleInputHistory.noData', 'No data yet.')}</td></tr>`;
             return;
         }
         $histRows.innerHTML = rows.map(r => {
-            const meta = COLOR_META[r.variant] || { name: r.color, cls: '' };
-            const printedAt = new Date(r.printedAt).toLocaleString();
-            const reprinted = r.reprintCount > 0;
-            const reprintTitle = reprinted && r.lastReprintedAt
-                ? ` title="${t('history.lastReprintedAt', 'Last reprinted')}: ${new Date(r.lastReprintedAt).toLocaleString()}"`
-                : '';
-            const reprintBadge = reprinted
-                ? `<span class="reprint-badge"${reprintTitle}>🔁 ×${r.reprintCount}</span>`
-                : '';
+            const statusCls = r.status === 'PASS' ? 'pass' : 'fail';
+            const timeline = new Date(r.timeline).toLocaleString();
+            const failedStepCell = r.failedStep
+                ? `<span class="failstep-badge">✕ ${STEP_DISPLAY_NUMBER[r.failedStep] || r.failedStep} — ${stepLabel(r.failedStep)}</span>`
+                : `<span class="failstep-none">—</span>`;
+            const failReasonCell = r.failReason
+                ? `<span title="${escapeHtml(r.failReason)}" style="color:var(--gray-500);font-size:0.78rem">${escapeHtml(r.failReason.length > 60 ? r.failReason.slice(0, 60) + '…' : r.failReason)}</span>`
+                : `<span class="failstep-none">—</span>`;
             return `
-                <tr class="${reprinted ? 'reprinted' : ''}">
-                    <td>${r.serialNumber}${reprintBadge}</td>
-                    <td><span class="swatch-dot ${meta.cls}"></span>${meta.name}</td>
-                    <td>${lineLabel(r.productionLine)}</td>
+                <tr>
                     <td>${r.workOrder || '—'}</td>
-                    <td>${printedAt}</td>
+                    <td>${r.serialNumber}</td>
+                    <td><span class="status-badge ${statusCls}">${r.status}</span></td>
+                    <td>${failedStepCell}</td>
+                    <td>${failReasonCell}</td>
+                    <td>${r.productionResultSubName || '—'}</td>
+                    <td>${timeline}</td>
                 </tr>`;
         }).join('');
     }
 
-    $histDate.addEventListener('change', () => {
-        currentPage = 1;
-        loadWorkOrderOptions(); // dropdown phải đổi theo ngày mới
-        loadHistory();
-    });
     $histPageSize.addEventListener('change', () => { currentPage = 1; loadHistory(); });
+    $histWorkOrder.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); currentPage = 1; loadHistory(); }
+    });
     $histSerial.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') { e.preventDefault(); currentPage = 1; loadHistory(); }
     });
-    $histWorkOrder.addEventListener('change', () => { currentPage = 1; loadHistory(); });
     $btnHistRefresh.addEventListener('click', () => { currentPage = 1; loadHistory(); });
 
-    // Re-render the table (color names / line labels) when EN/ZH is switched,
-    // without hitting the API again.
     document.addEventListener('sakura:lang-changed', () => {
         if (lastRows) renderHistory(lastRows);
         renderPagination();
     });
 
     // ── init ──────────────────────────────────────────────────────────────────
-    $histDate.value = todayStr();
-    loadWorkOrderOptions();
     loadHistory();
 })();
 </script>

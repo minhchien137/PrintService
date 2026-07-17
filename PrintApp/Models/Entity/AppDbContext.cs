@@ -14,6 +14,9 @@ public class AppDbContext : DbContext
     public DbSet<SakuraZplTemplate> SakuraZplTemplates { get; set; }
     public DbSet<SvnDefectCookie> SvnDefectCookies { get; set; }
     public DbSet<BackPanelLaserLog> BackPanelLaserLogs { get; set; }
+    public DbSet<MiddleDimensionCheckResult> MiddleDimensionCheckResults { get; set; }
+    public DbSet<ProductionInputLog> ProductionInputLogs { get; set; }
+    public DbSet<MiddleLog> MiddleLogs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

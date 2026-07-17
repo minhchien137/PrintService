@@ -105,14 +105,14 @@
     .t-table td { padding: 8px 10px; border-bottom: 1px dashed var(--gray-200); vertical-align: middle; }
     .t-table tr:hover td { background: var(--gray-50); }
 
-    /* ── PASS / NG status badge ─────────────────────────────────────────────── */
+    /* ── PASS / FAIL status badge ───────────────────────────────────────────── */
     .status-badge {
         display: inline-flex; align-items: center; gap: 4px;
         font-family: var(--font-body); font-size: 0.7rem; font-weight: 700; letter-spacing: 0.3px;
         padding: 3px 10px; border-radius: 10px; text-transform: uppercase;
     }
     .status-badge.pass    { color: #065F46; background: #ECFDF5; border: 1px solid rgba(5,150,105,0.35); }
-    .status-badge.ng      { color: #7F1D1D; background: var(--red-xlight); border: 1px solid rgba(220,38,38,0.35); }
+    .status-badge.fail    { color: #7F1D1D; background: var(--red-xlight); border: 1px solid rgba(220,38,38,0.35); }
     .status-badge.pending { color: #92400E; background: #FFFBEB; border: 1px solid rgba(217,119,6,0.35); }
 
     /* ── Failed-step indicator ──────────────────────────────────────────────── */
@@ -276,7 +276,7 @@
         try {
             const res = await fetch(`${BASE}/api/backpanel/laser/history?${params}`);
             const body = await res.json();
-            if (!res.ok || !body.ok) throw new Error(window.SakuraI18n.translateApiError(body, 'Failed to load history.'));
+            if (!res.ok || !body.ok) throw new Error(window.SakuraI18n.translateApiError(body, t('laserHistory.loadFailed', 'Failed to load history.')));
 
             lastRows = body.data.items;
             lastTotalCount = body.data.totalCount;
@@ -348,7 +348,7 @@
             return;
         }
         $histRows.innerHTML = rows.map(r => {
-            const statusCls = r.status === 'PASS' ? 'pass' : (r.status === 'PENDING' ? 'pending' : 'ng');
+            const statusCls = r.status === 'PASS' ? 'pass' : (r.status === 'PENDING' ? 'pending' : 'fail');
             const timeline = new Date(r.timeline).toLocaleString();
             const failedStepCell = r.failedStep
                 ? `<span class="failstep-badge">✕ ${STEP_DISPLAY_NUMBER[r.failedStep] || r.failedStep} — ${stepLabel(r.failedStep)}</span>`

@@ -78,7 +78,7 @@ public class SakuraController : Controller
             {
                 Key = "laserstation",
                 Icon = "🔦",
-                Title = "Laser Station",
+                Title = "Back Panel Station",
                 Subtitle = "Back Panel laser marking check",
                 Enabled = true,
                 Items = new List<SakuraAppTile>
@@ -87,7 +87,7 @@ public class SakuraController : Controller
                     {
                         Key = "laser",
                         Icon = "🔦",
-                        Title = "Laser",
+                        Title = "Enter Production Result & Print Laser",
                         Subtitle = "Scan Work Order & Serial Number",
                         Href = Url.Content("~/backpanel/laser"),
                         Enabled = true
@@ -96,9 +96,88 @@ public class SakuraController : Controller
                     {
                         Key = "logLaser",
                         Icon = "📋",
-                        Title = "Log Laser",
+                        Title = "Back Panel Input History",
                         Subtitle = "Laser scan history",
                         Href = Url.Content("~/backpanel/laser/history"),
+                        Enabled = true
+                    }
+                }
+            },
+            new SakuraAppTile
+            {
+                Key = "fqcgroup",
+                Icon = "✅",
+                Title = "FQC",
+                Subtitle = "Final QC scan stations",
+                Enabled = true,
+                Items = new List<SakuraAppTile>
+                {
+                    new SakuraAppTile
+                    {
+                        Key = "fqc02",
+                        Icon = "🔍",
+                        Title = "FQC02",
+                        Subtitle = "Trạm FQC02",
+                        Href = "https://ds.sigmaworldwide.io/ScanCheck/FQC/FQC02",
+                        OpenInNewTab = true,
+                        Enabled = true
+                    },
+                    new SakuraAppTile
+                    {
+                        Key = "fqc04",
+                        Icon = "🔍",
+                        Title = "FQC04",
+                        Subtitle = "Trạm FQC04",
+                        Href = "https://ds.sigmaworldwide.io/ScanCheck/FQC/FQC04",
+                        OpenInNewTab = true,
+                        Enabled = true
+                    },
+                    new SakuraAppTile
+                    {
+                        Key = "fqcfg",
+                        Icon = "🔍",
+                        Title = "FQCFG",
+                        Subtitle = "Trạm FQCFG",
+                        Href = "https://ds.sigmaworldwide.io/ScanCheck/FQC/FQCBP",
+                        OpenInNewTab = true,
+                        Enabled = true
+                    }
+                }
+            },
+            new SakuraAppTile
+            {
+                Key = "middlepanelgroup",
+                Icon = "🧲",
+                Title = "Middle Panel",
+                Subtitle = "Middle station tools",
+                Enabled = true,
+                Items = new List<SakuraAppTile>
+                {
+                    new SakuraAppTile
+                    {
+                        Key = "middleinput",
+                        Icon = "📝",
+                        Title = "Enter Production Result",
+                        Subtitle = "Scan Work Order & Serial Number",
+                        Href = Url.Content("~/middle/inputresult"),
+                        Enabled = true
+                    },
+                    new SakuraAppTile
+                    {
+                        Key = "middleinputhistory",
+                        Icon = "🕘",
+                        Title = "Input Result History — Middle Panel",
+                        Subtitle = "Production result scan history",
+                        Href = Url.Content("~/middle/inputresult/history"),
+                        Enabled = true
+                    },
+                    new SakuraAppTile
+                    {
+                        Key = "middletestresult",
+                        Icon = "📊",
+                        Title = "Middle Panel Test Result",
+                        Subtitle = "Dimension check results",
+                        Href = Url.Content("~/middle/result"),
                         Enabled = true
                     }
                 }
