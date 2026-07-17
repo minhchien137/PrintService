@@ -62,7 +62,9 @@ public class BackPanelController : Controller
             if (string.IsNullOrWhiteSpace(result.Color))
                 return BadRequest(new { ok = false, error = $"Không xác định được màu cho Work Order '{wo}'.", errorCode = "workOrder.colorUnknown", errorParams = new { wo } });
 
-            return Ok(new { ok = true, data = new { workOrder = wo, color = result.Color, productId = result.ProductId, quantity = result.Quantity } });
+            int currentSubNameSuffix = await GetCurrentMaxSubNameSuffixAsync(wo);
+
+            return Ok(new { ok = true, data = new { workOrder = wo, color = result.Color, productId = result.ProductId, quantity = result.Quantity, currentSubNameSuffix } });
         }
         catch (Exception ex)
         {
@@ -246,16 +248,14 @@ public class BackPanelController : Controller
         return Ok(new { ok = true });
     }
 
-    // Lấy số thứ tự WO con lớn nhất hiện có của master_wo_code này từ
-    // SVN_ProductionInputLogs (nguồn sự thật thực tế, không phải log local của app), +1,
-    // để tính subName tiếp theo ("{masterWoCode}-{max+1:000}"). Luôn query DB tại đúng thời
-    // điểm gọi (không cache theo phiên) để lấy số mới nhất. Ném exception nếu query fail —
-    // caller phải dừng lại, không được tự đoán subName khi mất kết nối DB.
-    private async Task<string> BuildNextSubNameAsync(string masterWoCode)
+    // Lấy số thứ tự WO con lớn nhất HIỆN CÓ (chưa +1) của master_wo_code này từ
+    // SVN_ProductionInputLogs — dùng để hiển thị tiến độ (subName hiện tại / tổng số lượng)
+    // trên giao diện. Xem BuildNextSubNameAsync bên dưới cho phần tính subName tiếp theo.
+    private async Task<int> GetCurrentMaxSubNameSuffixAsync(string masterWoCode)
     {
         // CASE WHEN chặn trước trường hợp wo_code không có dấu '-' (RIGHT sẽ lỗi length âm
         // nếu thiếu bọc này — TRY_CAST một mình không chặn được lỗi đó).
-        int maxSuffix = await _db.Database
+        return await _db.Database
             .SqlQuery<int>($@"
                 SELECT ISNULL(MAX(
                     CASE WHEN CHARINDEX('-', REVERSE(wo_code)) > 0
@@ -265,7 +265,15 @@ public class BackPanelController : Controller
                 FROM [svn_pentaho].[dbo].[SVN_ProductionInputLogs]
                 WHERE master_wo_code = {masterWoCode}")
             .SingleAsync();
+    }
 
+    // Lấy số thứ tự WO con lớn nhất hiện có của master_wo_code này, +1, để tính subName
+    // tiếp theo ("{masterWoCode}-{max+1:000}"). Luôn query DB tại đúng thời điểm gọi (không
+    // cache theo phiên) để lấy số mới nhất. Ném exception nếu query fail — caller phải dừng
+    // lại, không được tự đoán subName khi mất kết nối DB.
+    private async Task<string> BuildNextSubNameAsync(string masterWoCode)
+    {
+        int maxSuffix = await GetCurrentMaxSubNameSuffixAsync(masterWoCode);
         return $"{masterWoCode}-{(maxSuffix + 1):D3}";
     }
 
