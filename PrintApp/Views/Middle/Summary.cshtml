@@ -273,8 +273,10 @@
     }
 
     function snChips(list) {
+        // Nối bằng ', ' (không chỉ dựa vào CSS gap) để khi bôi đen/copy text từ trình duyệt,
+        // các SN không bị dính liền nhau thành 1 chuỗi không đọc được.
         return list.length
-            ? `<div class="gap-detail-list">${list.map(sn => `<span class="sn-chip">${escapeHtml(sn)}</span>`).join('')}</div>`
+            ? `<div class="gap-detail-list">${list.map(sn => `<span class="sn-chip">${escapeHtml(sn)}</span>`).join(', ')}</div>`
             : `<div class="gap-detail-empty">${t('middleSummary.detailEmpty', 'Không có.')}</div>`;
     }
 

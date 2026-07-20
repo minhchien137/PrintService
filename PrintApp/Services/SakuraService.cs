@@ -443,7 +443,12 @@ public class SakuraService
 
         if (row != null) return row.ZplContent;
 
-        return templateKey == "SnLabel" ? ZplTemplates.DefaultSnLabel : "";
+        return templateKey switch
+        {
+            "SnLabel" => ZplTemplates.DefaultSnLabel,
+            "CartonLabel" => ZplTemplates.DefaultCartonLabel,
+            _ => ""
+        };
     }
 
     // Thêm mới hoặc cập nhật template theo key — dùng để sửa ZPL trực tiếp trong DB
@@ -476,6 +481,51 @@ public class SakuraService
 
     public static string BuildConcatenatedZpl(string templateContent, IEnumerable<string> serials) =>
         string.Concat(serials.Select(s => templateContent.Replace("{serialNumber}", s)));
+
+    // Carton SN Label — 1 label chứa nhiều placeholder khác nhau (khác với SnLabel chỉ có
+    // {serialNumber}) nên cần build riêng: tra màu → SKU/PV ID + mô tả, ghép {snSlots} từ
+    // CartonSnSlots theo đúng thứ tự SN được quét.
+    public async Task<string> BuildCartonLabelZplAsync(string cartonNumber, string color, string condition, IReadOnlyList<string> serialNumbers)
+    {
+        if (string.IsNullOrWhiteSpace(cartonNumber))
+            throw new SakuraValidationException("cartonLabel.cartonNumberMissing", "Thiếu Carton Number.");
+
+        if (color == null || !ZplTemplates.CartonColorMeta.TryGetValue(color, out var meta))
+            throw new SakuraValidationException("cartonLabel.unknownColor", $"Không nhận diện được màu '{color}'.", new { color });
+
+        if (condition != "New" && condition != "Refurb")
+            throw new SakuraValidationException("cartonLabel.invalidCondition", $"Condition '{condition}' không hợp lệ (chỉ New hoặc Refurb).", new { condition });
+
+        var serials = (serialNumbers ?? Array.Empty<string>())
+            .Where(s => !string.IsNullOrWhiteSpace(s))
+            .Select(s => s.Trim())
+            .ToList();
+
+        if (serials.Count == 0 || serials.Count > ZplTemplates.CartonSnSlots.Count)
+            throw new SakuraValidationException("cartonLabel.invalidQuantity", $"Số lượng serial phải từ 1 đến {ZplTemplates.CartonSnSlots.Count}.", new { max = ZplTemplates.CartonSnSlots.Count });
+
+        if (serials.Distinct(StringComparer.OrdinalIgnoreCase).Count() != serials.Count)
+            throw new SakuraValidationException("cartonLabel.duplicateSerial", "Danh sách serial có giá trị trùng lặp.");
+
+        string template = await GetZplTemplateAsync("CartonLabel");
+
+        var snSlots = new StringBuilder();
+        for (int i = 0; i < serials.Count; i++)
+        {
+            var (x, y) = ZplTemplates.CartonSnSlots[i];
+            if (snSlots.Length > 0) snSlots.Append('\n');
+            snSlots.Append(ZplTemplates.BuildCartonSnSlotZpl(x, y, serials[i]));
+        }
+
+        return template
+            .Replace("{cartonNumber}", cartonNumber.Trim())
+            .Replace("{skuPvId}", meta.SkuPvId)
+            .Replace("{description}", meta.Description)
+            .Replace("{quantity}", serials.Count.ToString())
+            .Replace("{condition}", condition)
+            .Replace("{pdf417Data}", string.Join(",", serials))
+            .Replace("{snSlots}", snSlots.ToString());
+    }
 
     // ── Direct TCP send (raw port 9100) ──────────────────────────────────────
 
