@@ -215,20 +215,21 @@ public class MiddleController : Controller
         }
 
         var logRows = await logQuery
-            .Select(x => new { x.MasterWoCode, x.WoCode })
+            .Select(x => new { x.MasterWoCode, x.WoCode, x.SerialCode })
             .ToListAsync();
 
-        // Có lọc ngày: wo_code là bộ đếm CỘNG DỒN suốt vòng đời WO, nên trong 1 khoảng ngày
-        // phải ĐẾM số bản ghi (mỗi bản ghi = 1 lần nhập), không lấy MAX suffix (MAX chỉ đúng
-        // khi tính trên toàn bộ lịch sử WO, còn tính theo ngày thì MAX sẽ ra số cộng dồn tới
-        // thời điểm đó chứ không phải số nhập riêng trong ngày).
+        // Có lọc ngày: đếm số SERIAL RIÊNG BIỆT đã nhập trong khoảng ngày đó (không lấy MAX
+        // suffix vì MAX chỉ đúng khi tính trên toàn bộ lịch sử WO). Phải Distinct theo
+        // SerialCode — không đếm thẳng số dòng bản ghi — vì 1 serial có thể có nhiều dòng log
+        // (nhập lại/sửa) trong cùng khoảng ngày; nếu không sẽ đếm trùng và Entered Qty (từ đó
+        // ra Gap) không còn khớp với danh sách SN Distinct ở GetSummaryDetail bên dưới.
         bool hasDateFilter = dateFrom.HasValue || dateTo.HasValue;
         var enteredQtyByWo = logRows
             .GroupBy(x => x.MasterWoCode!)
             .ToDictionary(
                 g => g.Key,
                 g => hasDateFilter
-                    ? g.Count()
+                    ? g.Select(x => x.SerialCode).Distinct(StringComparer.OrdinalIgnoreCase).Count()
                     : g.Select(x => ParseWoSuffix(x.WoCode)).DefaultIfEmpty(0).Max());
 
         var results = new List<MiddleWorkOrderSummaryDto>();

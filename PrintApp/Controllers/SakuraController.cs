@@ -76,6 +76,26 @@ public class SakuraController : Controller
             },
             new SakuraAppTile
             {
+                Key = "cartonsngroup",
+                Icon = "📦",
+                Title = "Carton SN Label",
+                Subtitle = "Carton serial number label printing",
+                Enabled = true,
+                Items = new List<SakuraAppTile>
+                {
+                    new SakuraAppTile
+                    {
+                        Key = "cartonsn",
+                        Icon = "🖨️",
+                        Title = "Print",
+                        Subtitle = "Print carton SN labels",
+                        Href = Url.Content("~/sakura/cartonsn"),
+                        Enabled = true
+                    }
+                }
+            },
+            new SakuraAppTile
+            {
                 Key = "laserstation",
                 Icon = "🔦",
                 Title = "Back Panel Station",
@@ -205,6 +225,12 @@ public class SakuraController : Controller
     public IActionResult SnLabelHistory()
     {
         return View("~/Views/Sakura/History.cshtml");
+    }
+
+    [HttpGet("/sakura/cartonsn")]
+    public IActionResult CartonSnIndex()
+    {
+        return View("~/Views/Sakura/CartonSN.cshtml");
     }
 
     // ── API: printer list (for other Sakura pages that need it) ────────────────
@@ -462,6 +488,25 @@ public class SakuraController : Controller
         string zpl = SakuraService.BuildConcatenatedZpl(template, rows.Select(r => r.SerialNumber));
         byte[] bytes = System.Text.Encoding.UTF8.GetBytes(zpl);
         return File(bytes, "text/plain", $"sn-labels-{batchId}.zpl");
+    }
+
+    // ── API: Carton SN Label print ───────────────────────────────────────────
+
+    [HttpPost("/api/sakura/cartonsn/print")]
+    public async Task<IActionResult> CartonSnPrint([FromBody] CartonLabelPrintRequest req)
+    {
+        if (req == null)
+            return BadRequest(new { ok = false, error = "Thiếu dữ liệu.", errorCode = "common.missingData" });
+
+        try
+        {
+            string zpl = await _snLabel.BuildCartonLabelZplAsync(req.CartonNumber, req.Color, req.Condition, req.SerialNumbers);
+            return Ok(new { ok = true, zpl });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(BuildError(ex));
+        }
     }
 
     // ── API: ZPL template CRUD (edit template content without touching code) ──
