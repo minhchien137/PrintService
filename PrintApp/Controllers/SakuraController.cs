@@ -14,13 +14,15 @@ public class SakuraController : Controller
     private readonly IConfiguration _config;
     private readonly AppDbContext _db;
     private readonly ViidooService _viidoo;
+    private readonly ProductionResultApiService _productionApi;
 
-    public SakuraController(SakuraService snLabel, IConfiguration config, AppDbContext db, ViidooService viidoo)
+    public SakuraController(SakuraService snLabel, IConfiguration config, AppDbContext db, ViidooService viidoo, ProductionResultApiService productionApi)
     {
         _snLabel = snLabel;
         _config = config;
         _db = db;
         _viidoo = viidoo;
+        _productionApi = productionApi;
     }
 
     // Gói 1 exception thành JSON lỗi có errorCode/errorParams (nếu có) để front-end tự
@@ -307,7 +309,8 @@ public class SakuraController : Controller
                 TotalQuantity = totalQuantity,
                 PrintedQuantity = printedQuantity,
                 RemainingQuantity = remainingQuantity,
-                LockedProductionDate = lockedDate
+                LockedProductionDate = lockedDate,
+                ProductId = result.ProductId
             };
             return Ok(new { ok = true, data = response });
         }
@@ -315,6 +318,252 @@ public class SakuraController : Controller
         {
             return BadRequest(BuildError(ex));
         }
+    }
+
+    // ── API: EAN lookup (bước "Check EAN" ở Process) ────────────────────────────
+    // Tra lại Work Order để lấy product_id (giống WorkOrderLookup), rồi gọi Odoo
+    // product.product/read để lấy mã EAN (x_custcode) — dùng để so khớp với mã EAN
+    // người vận hành quét/nhập trước khi cho qua bước Check Serial Number.
+
+    [HttpGet("/api/sakura/snlabel/ean-lookup")]
+    public async Task<IActionResult> EanLookup([FromQuery] string workOrder)
+    {
+        if (string.IsNullOrWhiteSpace(workOrder))
+            return BadRequest(new { ok = false, error = "Thiếu Work Order.", errorCode = "workOrder.missing" });
+
+        string wo = workOrder.Trim();
+        try
+        {
+            string? ean = await _viidoo.GetEanByWorkOrderAsync(wo);
+            if (string.IsNullOrEmpty(ean))
+                return BadRequest(new { ok = false, error = $"Không tìm thấy mã EAN cho Work Order '{wo}'.", errorCode = "ean.notFound", errorParams = new { wo } });
+
+            return Ok(new { ok = true, data = new { workOrder = wo, ean } });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(BuildError(ex));
+        }
+    }
+
+    // ── API: ghi log 1 lần Check EAN bị FAIL ngay ở bước quét EAN — bước này chặn không cho
+    // quét sang Serial Number nên KHÔNG đi qua verify-serial, phải ghi log riêng ở đây,
+    // nếu không lần fail EAN sẽ mất dấu hoàn toàn trong SM_SNLabelScanLog. ─────────────────
+
+    [HttpPost("/api/sakura/snlabel/log-ean-fail")]
+    public async Task<IActionResult> LogEanFail([FromBody] SnLabelEanFailLogRequest req)
+    {
+        if (req == null || string.IsNullOrWhiteSpace(req.WorkOrder))
+            return BadRequest(new { ok = false, error = "Thiếu Work Order.", errorCode = "workOrder.missing" });
+
+        var logEntry = new SnLabelScanLog
+        {
+            WorkOrder = req.WorkOrder.Trim(),
+            Ean = req.Ean?.Trim(),
+            SerialNumber = "", // chưa quét tới Serial Number ở bước này
+            Status = "FAIL",
+            FailedStep = 1,
+            Timeline = SakuraService.VietnamNow()
+        };
+
+        try
+        {
+            _db.SnLabelScanLogs.Add(logEntry);
+            await _db.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, BuildError(ex));
+        }
+
+        return Ok(new { ok = true, data = new { logId = logEntry.Id } });
+    }
+
+    // ── API: verify EAN + Color + Serial (Process: Check EAN -> Check Color & Serial
+    // Number -> Print Label) — MỖI lần quét đều ghi 1 dòng MỚI vào SM_SNLabelScanLog (audit
+    // trail đầy đủ, kể cả các lần FAIL — không ghi đè), trả về ZPL sẵn sàng in cho đúng
+    // SerialNumber đã quét nếu pass hết 3 bước đầu. SM_SNLabelPrint (kho nhãn đã in thật +
+    // tracking Reprint) chỉ nhận dòng mới ở ReportSnLabelPrintResult, sau khi in thành công. ──
+
+    [HttpPost("/api/sakura/snlabel/verify-serial")]
+    public async Task<IActionResult> VerifySnLabelSerial([FromBody] SnLabelVerifyRequest req)
+    {
+        if (req == null || string.IsNullOrWhiteSpace(req.SerialNumber))
+            return BadRequest(new { ok = false, error = "Thiếu Serial Number.", errorCode = "serial.missing" });
+        if (string.IsNullOrWhiteSpace(req.WorkOrder))
+            return BadRequest(new { ok = false, error = "Thiếu Work Order.", errorCode = "workOrder.missing" });
+        if (req.ProductId <= 0)
+            return BadRequest(new { ok = false, error = "Thiếu Product ID — vui lòng lookup lại Work Order.", errorCode = "serial.missingProductId" });
+        if (string.IsNullOrWhiteSpace(req.ExpectedColor))
+            return BadRequest(new { ok = false, error = "Thiếu màu Work Order để đối chiếu.", errorCode = "serial.missingExpectedColor" });
+
+        string serial = req.SerialNumber.Trim();
+        string workOrder = req.WorkOrder.Trim();
+        string ean = req.Ean?.Trim() ?? "";
+
+        // Serial đã in THÀNH CÔNG trước đó (dòng trong SM_SNLabelPrint có Status = PASS, hoặc
+        // NULL = dòng cũ từ flow tự sinh serial trước đây) -> chặn in trùng. Muốn in lại thì
+        // phải qua tab Reprint (không đi qua endpoint này). Không được chặn theo kiểu "có dòng
+        // là chặn" — dữ liệu cũ (trước khi tách SM_SNLabelScanLog) có thể còn sót dòng
+        // FAIL/PENDING trong chính bảng này, không phải là "đã in".
+        bool alreadyPrinted = await _db.SnLabelPrints.AnyAsync(x => x.SerialNumber == serial && (x.Status == null || x.Status == "PASS"));
+        if (alreadyPrinted)
+            return Conflict(new { ok = false, error = $"Serial '{serial}' đã được in trước đó.", errorCode = "serial.alreadyPrinted", errorParams = new { serial } });
+
+        if (!SakuraService.TryParseSerialParts(serial, out string variant, out string line, out string runningNumber, out int runningNumberInt))
+            return BadRequest(new { ok = false, error = $"Serial '{serial}' không đúng định dạng.", errorCode = "serial.invalidFormat", errorParams = new { serial } });
+
+        int? failedStep = null;
+        string? failMessage = null;
+        bool eanOk, colorOk = false, serialLogOk = false;
+
+        // Bước 1: Check EAN — đối chiếu lại với Odoo (không tin mã client đã tự so khớp trước đó).
+        string? realEan;
+        try
+        {
+            realEan = await _viidoo.GetProductEanAsync(req.ProductId);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(BuildError(ex));
+        }
+        eanOk = !string.IsNullOrEmpty(realEan) && string.Equals(realEan!.Trim(), ean, StringComparison.OrdinalIgnoreCase);
+        if (!eanOk)
+        {
+            failedStep = 1;
+            failMessage = "Mã EAN không khớp với Work Order.";
+        }
+
+        // Bước 2 (2.1): Check Color — màu embed trong Serial (theo TryResolveColorFromSerial)
+        // phải khớp màu của Work Order.
+        if (failedStep == null)
+        {
+            string? serialColor = SakuraService.TryResolveColorFromSerial(serial);
+            colorOk = serialColor != null && string.Equals(serialColor, req.ExpectedColor.Trim(), StringComparison.OrdinalIgnoreCase);
+            if (!colorOk)
+            {
+                failedStep = 2;
+                failMessage = "Màu của Serial không khớp với Work Order.";
+            }
+        }
+
+        // Bước 3 (2.2): Check đã nhập kết quả sản xuất cho serial này chưa — dùng lại
+        // CheckLotSerialFG của trạm Laser nhưng NGƯỢC ý nghĩa: ok=false (đã nhập trước đó)
+        // mới là điều SnLabel cần (label chỉ in SAU khi đã nhập KQSX ở trạm khác).
+        if (failedStep == null)
+        {
+            var checkResult = await _productionApi.CheckLotSerialFgAsync(req.ProductId, serial);
+            serialLogOk = checkResult.Ok == false;
+            if (!serialLogOk)
+            {
+                failedStep = 3;
+                failMessage = "Serial chưa được nhập kết quả sản xuất.";
+            }
+        }
+
+        string status = failedStep != null ? "FAIL" : "PENDING";
+        string zpl = "";
+        if (failedStep == null)
+        {
+            string template = await _snLabel.GetZplTemplateAsync("SnLabel");
+            zpl = SakuraService.BuildConcatenatedZpl(template, new[] { serial });
+        }
+
+        // Luôn insert dòng MỚI — không tìm/ghi đè dòng cũ, để giữ lại toàn bộ lịch sử mọi
+        // lần quét (kể cả các lần FAIL trước đó của cùng 1 serial).
+        var logEntry = new SnLabelScanLog
+        {
+            WorkOrder = workOrder,
+            Ean = ean,
+            SerialNumber = serial,
+            Model = SakuraService.Model,
+            Variant = variant,
+            Color = req.ExpectedColor.Trim(),
+            ProductionLine = line,
+            RunningNumber = runningNumber,
+            RunningNumberInt = runningNumberInt,
+            Status = status,
+            FailedStep = failedStep,
+            Timeline = SakuraService.VietnamNow()
+        };
+
+        try
+        {
+            _db.SnLabelScanLogs.Add(logEntry);
+            await _db.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, BuildError(ex));
+        }
+
+        return Ok(new
+        {
+            ok = true,
+            data = new
+            {
+                serialNumber = serial,
+                status,
+                failedStep,
+                failMessage,
+                eanOk,
+                colorOk,
+                serialLogOk,
+                logId = logEntry.Id,
+                zpl
+            }
+        });
+    }
+
+    // ── API: trình duyệt báo kết quả in nhãn cục bộ qua bridge — chỉ gọi sau khi
+    // verify-serial trả status="PENDING" (đã pass Check EAN + Check Color + Check Serial).
+    // Cập nhật dòng log (logId) + nếu in thành công, tạo luôn dòng "đã in thật" trong
+    // SM_SNLabelPrint (kho nhãn, dùng cho tính remaining quantity + tracking Reprint). ──────
+
+    [HttpPost("/api/sakura/snlabel/report-print-result")]
+    public async Task<IActionResult> ReportSnLabelPrintResult([FromBody] SnLabelReportPrintResultRequest req)
+    {
+        if (req == null)
+            return BadRequest(new { ok = false, error = "Thiếu dữ liệu.", errorCode = "common.missingData" });
+
+        var entry = await _db.SnLabelScanLogs.FindAsync(req.LogId);
+        if (entry == null)
+            return NotFound(new { ok = false, error = $"Không tìm thấy log Id={req.LogId}.", errorCode = "common.missingData" });
+
+        entry.Status = req.Success ? "PASS" : "FAIL";
+        entry.FailedStep = req.Success ? null : 4;
+
+        if (req.Success)
+        {
+            _db.SnLabelPrints.Add(new SnLabelPrint
+            {
+                SerialNumber = entry.SerialNumber,
+                Model = entry.Model ?? SakuraService.Model,
+                Variant = entry.Variant ?? "",
+                Color = entry.Color ?? "",
+                ProductionLine = entry.ProductionLine ?? "",
+                ProductionDate = SakuraService.VietnamNow().Date,
+                RunningNumber = entry.RunningNumber ?? "",
+                RunningNumberInt = entry.RunningNumberInt ?? 0,
+                PrintedAt = SakuraService.VietnamNow(),
+                BatchId = Guid.NewGuid(),
+                WorkOrder = entry.WorkOrder,
+                Ean = entry.Ean,
+                Status = "PASS",
+                FailedStep = null
+            });
+        }
+
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, BuildError(ex));
+        }
+
+        return Ok(new { ok = true });
     }
 
     // ── API: unlock Manual print mode with a shared password ────────────────────
@@ -460,9 +709,9 @@ public class SakuraController : Controller
     // ── API: history ──────────────────────────────────────────────────────────
 
     [HttpGet("/api/sakura/snlabel/history")]
-    public async Task<IActionResult> History([FromQuery] DateTime? date, [FromQuery] string? workOrder, [FromQuery] string? serialNumber, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+    public async Task<IActionResult> History([FromQuery] DateTime? date, [FromQuery] string? workOrder, [FromQuery] string? serialNumber, [FromQuery] string? ean, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
-        var result = await _snLabel.GetHistoryAsync(date, workOrder, serialNumber, page, pageSize);
+        var result = await _snLabel.GetHistoryAsync(date, workOrder, serialNumber, ean, page, pageSize);
         return Ok(new { ok = true, data = result });
     }
 
