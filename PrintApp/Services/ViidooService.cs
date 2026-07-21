@@ -24,6 +24,7 @@ public class ViidooService
     private readonly AppDbContext _db;
 
     private const string OdooApiUrl = "https://sigmaworldwide.io/web/dataset/call_kw/mrp.production/web_search_read";
+    private const string OdooProductReadUrl = "https://sigmaworldwide.io/web/dataset/call_kw/product.product/read";
 
     // Số cấp WO cha tối đa sẽ truy ngược khi tìm màu (tránh lặp vô hạn).
     private const int MaxParentLookupDepth = 5;
@@ -108,6 +109,82 @@ public class ViidooService
         }
 
         return new ViidooSearchResult { ProductCode = productCode, Color = color, Quantity = quantity, ProductId = productId };
+    }
+
+    // Tra WO -> lấy product_id (dùng lại SearchAsync) -> gọi product.product/read để lấy
+    // mã EAN (x_custcode). Dùng cho bước "Check EAN" ở Process (SnLabel): người vận hành
+    // quét mã EAN trên sản phẩm, so khớp với mã trả về từ Odoo.
+    // Trả về null nếu không tìm thấy WO, WO không có product_id, hoặc sản phẩm không có x_custcode.
+    public async Task<string?> GetEanByWorkOrderAsync(string productionCode)
+    {
+        var result = await SearchAsync(productionCode);
+        if (result?.ProductId is not int productId) return null;
+
+        return await GetProductEanAsync(productId);
+    }
+
+    // Gọi Odoo read trên product.product theo productId, trả về x_custcode (mã EAN) hoặc
+    // null nếu sản phẩm không có field này / không tìm thấy.
+    public async Task<string?> GetProductEanAsync(int productId)
+    {
+        string? cookie = await GetCookieFromDbAsync();
+        if (cookie == null)
+            throw new SakuraCodedException("odoo.cookieNotConfigured", "Odoo cookie not configured. Please update SVN_Defect_Cookie table.");
+
+        string finalJson = $@"
+    {{
+        ""id"": 555555556,
+        ""jsonrpc"": ""2.0"",
+        ""method"": ""call"",
+        ""params"": {{
+            ""model"": ""product.product"",
+            ""method"": ""read"",
+            ""args"": [[{productId}], [""x_custcode""]],
+            ""kwargs"": {{
+                ""context"": {{
+                    ""lang"": ""vi_VN"",
+                    ""tz"": ""Asia/Ho_Chi_Minh"",
+                    ""uid"": 2,
+                    ""allowed_company_ids"": [1]
+                }}
+            }}
+        }}
+    }}";
+
+        var jsonContent = new StringContent(finalJson, Encoding.UTF8, "application/json");
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, OdooProductReadUrl) { Content = jsonContent };
+        request.Headers.Add("Cookie", cookie);
+
+        var response = await _httpClient.SendAsync(request);
+        response.EnsureSuccessStatusCode();
+
+        string responseBody = await response.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(responseBody);
+        var root = doc.RootElement;
+
+        if (root.TryGetProperty("error", out var error))
+        {
+            Console.WriteLine($"Odoo returned error: {error}");
+            return null;
+        }
+
+        // read() trả result là mảng record thẳng (khác web_search_read có wrapper "records").
+        if (!root.TryGetProperty("result", out var result) ||
+            result.ValueKind != JsonValueKind.Array ||
+            result.GetArrayLength() == 0)
+        {
+            return null;
+        }
+
+        var record = result[0];
+        if (record.TryGetProperty("x_custcode", out var eanEl) && eanEl.ValueKind == JsonValueKind.String)
+        {
+            string? ean = eanEl.GetString();
+            return string.IsNullOrWhiteSpace(ean) ? null : ean;
+        }
+
+        return null;
     }
 
     // Gọi Odoo web_search_read trên mrp.production theo productionCode,

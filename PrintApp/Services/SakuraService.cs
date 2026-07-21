@@ -123,6 +123,33 @@ public class SakuraService
         return VariantColorMap.TryGetValue(variant, out var color) ? color : null;
     }
 
+    // Tách cấu trúc 1 serial SnLabel (Model+variant+year+day+line+running) mà KHÔNG đòi hỏi
+    // variant phải là màu hợp lệ (khác TryResolveColorFromSerial) — dùng ở bước verify-serial
+    // (Check EAN -> Check Color & Serial Number) để vẫn lấy được Variant/Line/RunningNumber
+    // ghi vào lịch sử SM_SNLabelPrint ngay cả khi bước Check Color bị FAIL (màu không khớp).
+    // Trả về false nếu serial sai độ dài/model — khi đó không có gì để ghi lại.
+    public static bool TryParseSerialParts(string serial, out string variant, out string line, out string runningNumber, out int runningNumberInt)
+    {
+        variant = ""; line = ""; runningNumber = ""; runningNumberInt = 0;
+        if (string.IsNullOrWhiteSpace(serial)) return false;
+
+        string s = serial.Trim().ToUpperInvariant();
+        if (s.Length != 15 || !s.StartsWith(Model)) return false;
+
+        variant = s.Substring(5, 2);
+        line = s.Substring(11, 1);
+        runningNumber = s.Substring(12, 3);
+        try
+        {
+            runningNumberInt = Base34Decode(runningNumber);
+        }
+        catch (ArgumentException)
+        {
+            return false;
+        }
+        return true;
+    }
+
     // ── Serial number formatting ─────────────────────────────────────────────
 
     public static string BuildSerial(string variant, DateTime productionDate, string line, string runningNumber)
@@ -175,7 +202,7 @@ public class SakuraService
                 if (!string.IsNullOrWhiteSpace(workOrder) && workOrderTotalQuantity is int totalQty)
                 {
                     int alreadyPrinted = await _context.SnLabelPrints
-                        .Where(x => x.WorkOrder == workOrder)
+                        .Where(x => x.WorkOrder == workOrder && (x.Status == null || x.Status == "PASS"))
                         .CountAsync();
                     int woRemaining = totalQty - alreadyPrinted;
                     if (quantity > woRemaining)
@@ -255,13 +282,16 @@ public class SakuraService
     private static bool IsUniqueViolation(DbUpdateException ex) =>
         ex.InnerException is SqlException sqlEx && (sqlEx.Number == 2601 || sqlEx.Number == 2627);
 
-    // Tổng số label đã in cho 1 Work Order (không phân biệt ngày/line — cộng dồn
-    // qua nhiều lượt in khác nhau). Dùng để tính "còn lại bao nhiêu" khi lookup.
+    // Tổng số label đã in THÀNH CÔNG (Status = PASS, hoặc NULL = dòng cũ từ flow tự sinh
+    // serial — luôn coi là đã in xong) cho 1 Work Order — không phân biệt ngày/line, cộng dồn
+    // qua nhiều lượt in khác nhau. Dòng FAIL/PENDING (chưa qua hết Check EAN -> Check Color &
+    // Serial Number -> Print Label) KHÔNG được tính, vì chưa thực sự in ra được cái nào.
+    // Dùng để tính "còn lại bao nhiêu" khi lookup.
     public async Task<int> GetWorkOrderPrintedCountAsync(string workOrder)
     {
         return await _context.SnLabelPrints
             .AsNoTracking()
-            .CountAsync(x => x.WorkOrder == workOrder);
+            .CountAsync(x => x.WorkOrder == workOrder && (x.Status == null || x.Status == "PASS"));
     }
 
     // Ngày sản xuất của lần in đầu tiên cho Work Order này (null nếu chưa in lần nào).
@@ -326,25 +356,27 @@ public class SakuraService
 
     // ── History ───────────────────────────────────────────────────────────────
 
-    public async Task<SnLabelHistoryPageDto> GetHistoryAsync(DateTime? date, string? workOrder, string? serialNumber, int page, int pageSize)
+    // Đọc từ SM_SNLabelScanLog — audit trail ĐẦY ĐỦ mọi lần quét EAN+Serial (kể cả các lần
+    // FAIL, mỗi lần 1 dòng riêng, không bị ghi đè). SM_SNLabelPrint (chỉ chứa serial đã in
+    // THÀNH CÔNG) chỉ được join thêm vào để lấy ReprintCount/LastReprintedAt cho badge Reprint.
+    public async Task<SnLabelHistoryPageDto> GetHistoryAsync(DateTime? date, string? workOrder, string? serialNumber, string? ean, int page, int pageSize)
     {
         page = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize, 1, 200);
 
-        var query = _context.SnLabelPrints.AsNoTracking().AsQueryable();
+        var query = _context.SnLabelScanLogs.AsNoTracking().AsQueryable();
 
         if (date.HasValue)
         {
-            DateTime prodDate = date.Value.Date;
-            query = query.Where(x => x.ProductionDate == prodDate);
+            DateTime dayStart = date.Value.Date;
+            DateTime dayEnd = dayStart.AddDays(1);
+            query = query.Where(x => x.Timeline >= dayStart && x.Timeline < dayEnd);
         }
 
-        // Chọn từ dropdown (chỉ liệt kê các WO đã có sẵn trong DB) nên khớp chính xác,
-        // không cần "chứa" như trước.
         if (!string.IsNullOrWhiteSpace(workOrder))
         {
             string wo = workOrder.Trim();
-            query = query.Where(x => x.WorkOrder == wo);
+            query = query.Where(x => x.WorkOrder.Contains(wo));
         }
 
         if (!string.IsNullOrWhiteSpace(serialNumber))
@@ -353,27 +385,48 @@ public class SakuraService
             query = query.Where(x => x.SerialNumber.Contains(sn));
         }
 
+        if (!string.IsNullOrWhiteSpace(ean))
+        {
+            string eanFilter = ean.Trim();
+            query = query.Where(x => x.Ean != null && x.Ean.Contains(eanFilter));
+        }
+
         int totalCount = await query.CountAsync();
 
-        var items = await query
-            .OrderByDescending(x => x.PrintedAt)
+        var logRows = await query
+            .OrderByDescending(x => x.Timeline)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .Select(x => new SnLabelHistoryItemDto
+            .ToListAsync();
+
+        // Reprint chỉ có ý nghĩa với serial đã in thật (nằm trong SM_SNLabelPrint) — join tay
+        // trong bộ nhớ (sau khi đã phân trang) cho gọn, thay vì viết LEFT JOIN trong LINQ-to-SQL.
+        var serialsInPage = logRows.Select(x => x.SerialNumber).Distinct().ToList();
+        var printInfoBySerial = await _context.SnLabelPrints
+            .AsNoTracking()
+            .Where(x => serialsInPage.Contains(x.SerialNumber))
+            .Select(x => new { x.SerialNumber, x.ReprintCount, x.LastReprintedAt })
+            .ToDictionaryAsync(x => x.SerialNumber);
+
+        var items = logRows.Select(x =>
+        {
+            printInfoBySerial.TryGetValue(x.SerialNumber, out var printInfo);
+            return new SnLabelHistoryItemDto
             {
                 Id = x.Id,
                 SerialNumber = x.SerialNumber,
-                Variant = x.Variant,
-                Color = x.Color,
-                ProductionLine = x.ProductionLine,
-                PrintedAt = x.PrintedAt,
-                PrintedBy = x.PrintedBy,
-                BatchId = x.BatchId,
+                Variant = x.Variant ?? "",
+                Color = x.Color ?? "",
+                ProductionLine = x.ProductionLine ?? "",
+                PrintedAt = x.Timeline,
                 WorkOrder = x.WorkOrder,
-                ReprintCount = x.ReprintCount,
-                LastReprintedAt = x.LastReprintedAt
-            })
-            .ToListAsync();
+                ReprintCount = printInfo?.ReprintCount ?? 0,
+                LastReprintedAt = printInfo?.LastReprintedAt,
+                Ean = x.Ean,
+                Status = x.Status,
+                FailedStep = x.FailedStep
+            };
+        }).ToList();
 
         return new SnLabelHistoryPageDto
         {

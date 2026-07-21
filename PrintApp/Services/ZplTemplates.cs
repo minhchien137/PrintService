@@ -39,8 +39,8 @@ public static class ZplTemplates
 ^FPH,1^FT94,1711^A0B,38,38^FH\^CI28^FDCARTON NUMBER^FS^CI27
 ^FPH,1^FT250,1711^A0B,38,38^FH\^CI28^FDCARTON CONTAINS^FS^CI27
 ^FT94,1271^A0B,38,38^FH\^CI28^FD{cartonNumber}^FS^CI27
-^BY3,3,63^FT188,1562^BCB,,N,N,N,A
-^FH\^FD{cartonNumber}^FS
+^BY3,3,63^FT188,1562^BCB,,N,N
+^FD{cartonNumber}^FS
 ^FPH,1^FT317,1711^A0B,38,38^FH\^CI28^FDSKU/PV ID:^FS^CI27
 ^FPH,1^FT317,1283^A0B,38,38^FH\^CI28^FDDESCRIPTION:^FS^CI27
 ^FPH,1^FT449,1283^A0B,38,38^FH\^CI28^FDCONDITION:^FS^CI27
@@ -71,8 +71,18 @@ public static class ZplTemplates
         (586, 170),  (728, 170),
     };
 
-    // 2 dòng ZPL cho 1 SN slot: field text (offset +30,+305) + Code128 barcode (offset +42,+305).
+    // Kích thước text/barcode cho 10 ô SN — bản đầu (26/2/64) in ra nhỏ hơn nhiều so với
+    // bitmap gốc trong thiết kế ZebraDesigner (~312 dots/ô), nên tăng lên đây. Đây là ước
+    // lượng ban đầu — chỉnh lại các số này sau khi có bản in thật, không cần đụng logic khác.
+    public const int SnTextFontSize = 34;          // ^A0B,<size>,<size>
+    public const int SnBarcodeModuleWidth = 3;      // ^BY<width>,...
+    public const int SnBarcodeHeight = 90;          // ^BY...,,<height>
+    public const int SnTextOffset = 34;             // offset X/Y của field text so với gốc slot
+    public const int SnBarcodeOffset = 50;          // offset X/Y của barcode so với gốc slot (phải > SnTextOffset để không đè lên text)
+
+    // 2 dòng ZPL cho 1 SN slot: field text + Code128 barcode (cùng format ^BCB,,N,N
+    // 4 tham số như barcode CARTON NUMBER gốc — không dùng ^FH\ vì serial không cần hex-escape).
     public static string BuildCartonSnSlotZpl(int x, int y, string serialNumber) =>
-        $"^FT{x + 30},{y + 305}^A0B,26,26^FH\\^CI28^FD{serialNumber}^FS^CI27\n" +
-        $"^BY2,3,64^FT{x + 42},{y + 305}^BCB,,N,N,N,A^FD{serialNumber}^FS";
+        $"^FT{x + SnTextOffset},{y + 305}^A0B,{SnTextFontSize},{SnTextFontSize}^FH\\^CI28^FD{serialNumber}^FS^CI27\n" +
+        $"^BY{SnBarcodeModuleWidth},3,{SnBarcodeHeight}^FT{x + SnBarcodeOffset},{y + 305}^BCB,,N,N^FD{serialNumber}^FS";
 }

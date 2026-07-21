@@ -45,7 +45,7 @@
     }
     body::before { content: none !important; }
 
-    .snl-page { max-width: 1040px; margin: 0 auto; position: relative; z-index: 1; }
+    .snl-page { max-width: 1440px; margin: 0 auto; position: relative; z-index: 1; }
 
     .snl-header {
         display: flex;
@@ -70,9 +70,78 @@
     }
     .snl-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--red); flex-shrink: 0; }
 
-    .snl-layout { display: flex; gap: 28px; align-items: flex-start; }
-    .snl-left { flex: 1.3; min-width: 0; }
+    .snl-layout { display: flex; gap: 32px; align-items: flex-start; }
+    .snl-left { flex: 1.1; min-width: 0; }
     .snl-right { flex: 1; min-width: 0; position: sticky; top: 24px; }
+
+    /* ── Result indicator circle — mirrors BackPanel/Laser.cshtml's .lz-circle ── */
+    .snl-circle-wrap { display: flex; flex-direction: column; align-items: center; padding: 14px 0 8px; }
+    .snl-circle {
+        width: 260px; height: 260px; border-radius: 50%; margin-bottom: 18px;
+        display: flex; align-items: center; justify-content: center;
+        font-family: var(--font-head); font-size: 44px; font-weight: 800; color: var(--white);
+        border: 6px solid transparent; box-shadow: var(--shadow-lg);
+        transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+    }
+    .snl-circle.idle { background: var(--gray-200); color: var(--gray-500); border-color: var(--gray-400); }
+    .snl-circle.pass { background: var(--success); border-color: #047857; transform: scale(1.03); }
+    .snl-circle.fail { background: var(--danger);  border-color: #B91C1C; transform: scale(1.03); }
+
+    /* ── Process steps tracker — mirrors BackPanel/Laser.cshtml's .lz-steps ── */
+    .snl-steps { display: flex; flex-direction: column; margin-top: 4px; }
+    .snl-step {
+        display: flex; align-items: center; gap: 12px; padding: 14px 2px;
+        border-bottom: 1px dashed var(--gray-200);
+    }
+    .snl-step:last-child { border-bottom: none; }
+    .snl-step-icon {
+        min-width: 30px; height: 30px; padding: 0 5px; border-radius: 15px; flex-shrink: 0;
+        display: flex; align-items: center; justify-content: center;
+        font-family: var(--font-body); font-size: 13px; font-weight: 800;
+        border: 2px solid var(--gray-200); background: var(--white); color: var(--gray-400);
+        transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    }
+    .snl-step-icon.done { background: var(--success); border-color: #047857; color: var(--white); }
+    .snl-step-icon.fail { background: var(--danger); border-color: #B91C1C; color: var(--white); }
+    .snl-step-label {
+        font-family: var(--font-body); font-size: 0.85rem; font-weight: 600; color: var(--gray-700); flex: 1;
+    }
+    .snl-step.is-done .snl-step-label { color: var(--gray-900); }
+    .snl-step.is-fail .snl-step-label { color: var(--red-dark); }
+
+    /* Sub-steps (2.1 / 2.2) nested under a parent step — indented, smaller icon. */
+    .snl-step.snl-substep { padding-left: 26px; padding-top: 10px; padding-bottom: 10px; }
+    .snl-step.snl-substep .snl-step-icon {
+        min-width: 24px; height: 24px; border-radius: 12px; font-size: 11px;
+    }
+    .snl-step.snl-substep .snl-step-label { font-size: 0.8rem; font-weight: 500; color: var(--gray-600); }
+
+    /* ── Retry / Skip — gọn trong cùng hàng với "3. Print Label" khi bước in fail ──── */
+    .snl-retry-actions { display: flex; align-items: center; gap: 6px; margin-left: auto; flex-shrink: 0; }
+    .snl-retry-btn {
+        font-family: var(--font-body); font-size: 0.7rem; font-weight: 700; letter-spacing: 0.2px;
+        border: 1.5px solid transparent; cursor: pointer; padding: 5px 10px; border-radius: 8px; white-space: nowrap;
+        display: flex; align-items: center; gap: 4px; transition: all 0.2s ease;
+    }
+    .snl-retry-btn.primary { background: linear-gradient(135deg, var(--red-dark), var(--red-mid)); color: var(--white); }
+    .snl-retry-btn.primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 3px 10px rgba(200,16,46,0.3); }
+    .snl-retry-btn.primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .snl-retry-btn.ghost { background: var(--white); color: var(--gray-500); border-color: var(--gray-200); }
+    .snl-retry-btn.ghost:hover { border-color: var(--red); color: var(--red); background: var(--red-xlight); }
+
+    /* ── Printer Configuration — collapsible header to save vertical space ──── */
+    .snl-config-topright { position: absolute; top: 18px; right: 20px; display: flex; align-items: center; gap: 12px; }
+    .snl-config-topright .node-indicator { position: static; top: auto; right: auto; }
+    .snl-collapse-btn {
+        background: var(--white); border: 1.5px solid var(--gray-200); border-radius: 8px; cursor: pointer;
+        width: 32px; height: 32px; padding: 0; margin: 0;
+        color: var(--gray-500); font-size: 18px; line-height: 1;
+        display: flex; align-items: center; justify-content: center;
+        transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+    }
+    .snl-collapse-btn:hover { color: var(--red); border-color: var(--red); background: var(--red-xlight); }
+    .snl-collapse-btn span { display: inline-block; transition: transform 0.2s ease; }
+    .snl-collapse-btn.open span { transform: rotate(180deg); }
 
     /* ── Reused section/grid/field/button primitives ──────────────────────── */
     .t-section {
@@ -123,6 +192,14 @@
     .usb-status.ok  { color: var(--success); }
     .usb-status.bad { color: var(--danger); }
 
+    /* Inline "✓ Saved" feedback next to a Save button — fades in/out instead of
+       showing a status message elsewhere on the page. */
+    .snl-inline-saved {
+        font-family: var(--font-body); font-size: 0.8rem; font-weight: 600; color: var(--success);
+        opacity: 0; transition: opacity 0.25s ease; pointer-events: none;
+    }
+    .snl-inline-saved.show { opacity: 1; }
+
     .btn-icon {
         flex-shrink: 0; background: var(--white); border: 1.5px solid var(--gray-200); color: var(--gray-500);
         font-family: var(--font-body); font-weight: 600; font-size: 0.8rem; min-height: 46px;
@@ -163,6 +240,12 @@
     .t-btn-outline:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
     .t-btn-ghost { background: var(--white); color: var(--gray-500); border: 1.5px solid var(--gray-200); }
     .t-btn-ghost:hover { border-color: var(--red); color: var(--red); background: var(--red-xlight); }
+
+    /* "Saved" lit-up state — stays green until Reset is pressed, so it's obvious
+       at a glance that the current Work Order has been saved. */
+    .t-btn-ghost.is-saved, .t-btn-ghost.is-saved:hover {
+        background: var(--success); border-color: #047857; color: var(--white);
+    }
 
     .t-status {
         font-family: var(--font-body); font-size: 0.85rem; padding: 12px 16px; border-radius: 12px;
@@ -267,7 +350,7 @@
     @@media (max-width: 860px) {
         .snl-layout { flex-direction: column; }
         .snl-right { position: static; width: 100%; }
-        .t-grid-2, .t-grid-3, .snl-summary-grid { grid-template-columns: 1fr; }
+        .t-grid-2, .t-grid-3 { grid-template-columns: 1fr; }
     }
 
     /* ── Language switcher — fixed top-right, shared across all Sakura pages ── */
@@ -308,8 +391,79 @@
 
     <div class="snl-layout">
 
-        <!-- ── Left: form + serial output + history ── -->
+        <!-- ── Left: Printer Configuration + Print Mode + Print Information ── -->
         <div class="snl-left">
+
+            <div class="t-section" id="printerConfigSection" style="position:relative">
+                <div class="t-section-label" data-i18n="snlabel.printerConfig">Printer Configuration</div>
+
+                <div class="snl-config-topright">
+                    <button type="button" class="snl-collapse-btn" id="btnTogglePrinterConfig" data-i18n-title="snlabel.printerConfigToggleTitle" title="Show/hide printer configuration" aria-expanded="false">
+                        <span id="printerConfigChevron">▾</span>
+                    </button>
+                    <div class="node-indicator">
+                        <div class="node-dot" id="nodeDot"></div>
+                        <span id="nodeTxt" data-i18n="snlabel.serviceChecking">Service …</span>
+                    </div>
+                </div>
+
+                <div id="printerConfigBody" style="display:none">
+                    <!-- Toggle TCP / USB — same component as the /Print page -->
+                    <div class="mode-toggle" id="modeToggle" style="margin-bottom:18px">
+                        <label id="lblTcp" class="active">
+                            <input type="radio" name="sakura-print-mode" value="tcp" checked />
+                            <span class="mode-icon">🌐</span>
+                            <span>TCP / IP</span>
+                        </label>
+                        <label id="lblUsb">
+                            <input type="radio" name="sakura-print-mode" value="usb" />
+                            <span class="mode-icon">🔌</span>
+                            <span>USB</span>
+                        </label>
+                    </div>
+
+                    <!-- TCP block -->
+                    <div id="tcpBlock">
+                        <div class="t-grid t-grid-2 printer-grid">
+                            <div class="t-field">
+                                <label data-i18n="snlabel.printerIp">Printer IP</label>
+                                <input type="text" id="printerIp" placeholder="192.168.1.100" />
+                            </div>
+                            <div class="t-field">
+                                <label data-i18n="snlabel.port">Port</label>
+                                <input type="number" id="printerPort" value="9100" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- USB block -->
+                    <div id="usbBlock" style="display:none">
+                        <div class="usb-row">
+                            <div class="t-field" style="margin-bottom:0">
+                                <label data-i18n="snlabel.usbPrinter">USB Printer</label>
+                                <select id="usbSelect" disabled>
+                                    <option value="" data-i18n="snlabel.usbScanHint">— Click 🔄 to scan —</option>
+                                </select>
+                            </div>
+                            <button class="btn-icon" id="btnRefreshUsb" type="button" data-i18n-title="snlabel.refreshUsbTitle" title="Rescan printers">
+                                <span data-i18n="snlabel.refreshUsb">🔄 Refresh</span>
+                            </button>
+                        </div>
+                        <div class="usb-status" id="usbStatus"></div>
+                    </div>
+
+                    <div class="t-grid t-grid-2" style="margin-top:14px">
+                        <div class="t-field">
+                            <label data-i18n="snlabel.copies">Copies</label>
+                            <input type="number" id="copies" value="1" min="1" max="10" />
+                        </div>
+                    </div>
+                    <div class="t-actions" style="margin-top:16px">
+                        <button class="t-btn t-btn-ghost" id="btnSavePrinter" data-i18n="snlabel.save">Save</button>
+                        <span class="snl-inline-saved" id="printerSavedHint" data-i18n="snlabel.savedHint">✓ Saved</span>
+                    </div>
+                </div>
+            </div>
 
             <div class="t-section">
                 <div class="t-section-label" data-i18n="snlabel.printModeLabel">Print Mode</div>
@@ -333,6 +487,8 @@
                         </div>
                         <div class="t-actions" style="margin-top:0">
                             <button type="button" class="t-btn t-btn-outline" id="btnLookupWo" data-i18n="snlabel.lookupBtn">🔍 Lookup</button>
+                            <button type="button" class="t-btn t-btn-ghost" id="btnSaveWo" data-i18n="snlabel.saveWoBtn">💾 Save</button>
+                            <button type="button" class="t-btn t-btn-ghost" id="btnResetWo" data-i18n="snlabel.resetWoBtn">✕ Reset</button>
                         </div>
                     </div>
                     <div id="woStatus" class="t-status"></div>
@@ -342,20 +498,23 @@
                             <span class="v" id="woColor">—</span>
                         </div>
                         <div class="snl-readout-row">
-                            <span class="k" data-i18n="snlabel.woRemaining">Remaining / Total</span>
-                            <span class="v big" id="woRemaining">—</span>
+                            <span class="k" data-i18n="snlabel.woPrinted">Already Printed</span>
+                            <span class="v big" id="woPrinted">—</span>
                         </div>
                         <div class="snl-readout-row" style="border-bottom:none;padding-bottom:0">
-                            <span class="k" data-i18n="snlabel.woPrinted">Already Printed</span>
-                            <span class="v muted" id="woPrinted">—</span>
+                            <span class="k" data-i18n="snlabel.woRemaining">Remaining</span>
+                            <span class="v big" id="woRemaining">—</span>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div class="t-section" id="printParamsSection">
-                <div class="t-section-label" data-i18n="snlabel.printParams">Print Parameters</div>
+                <div class="t-section-label" data-i18n="snlabel.printParams">Print Information</div>
 
+                <!-- Tạm comment logic Print Parameters cũ (Production Date / Line / Color / Quantity) —
+                     thay bằng 2 ô EAN + Serial Number bên dưới. Cần bật lại thì bỏ comment khối này
+                     (và bỏ comment lại các biến/hàm JS tương ứng đã tắt cùng lúc).
                 <div class="t-grid t-grid-2">
                     <div class="t-field">
                         <label data-i18n="snlabel.prodDate">Production Date</label>
@@ -387,10 +546,17 @@
                         <input type="number" id="quantity" value="1" min="1" max="500" />
                     </div>
                 </div>
+                -->
 
-                <div class="t-actions" style="margin-top:20px">
-                    <button class="t-btn t-btn-primary" id="btnPrint" data-i18n="snlabel.printBtn">PRINT</button>
-                    <button class="t-btn t-btn-ghost" id="btnRefresh" data-i18n="snlabel.refreshBtn">↻ Refresh</button>
+                <div class="t-grid" style="grid-template-columns:1fr">
+                    <div class="t-field">
+                        <label data-i18n="snlabel.ean">EAN</label>
+                        <input type="text" id="eanInput" autocomplete="off" data-i18n-placeholder="snlabel.eanPlaceholder" placeholder="Scan or type EAN…" />
+                    </div>
+                    <div class="t-field">
+                        <label data-i18n="snlabel.serialNumber">Serial Number</label>
+                        <input type="text" id="snInput" autocomplete="off" data-i18n-placeholder="snlabel.serialNumberPlaceholder" placeholder="Scan or type Serial Number…" />
+                    </div>
                 </div>
 
                 <div id="printerHint" class="t-status"></div>
@@ -433,97 +599,57 @@
 
         </div>
 
-        <!-- ── Right: status panel ── -->
+        <!-- ── Right: Result + Process ── -->
         <div class="snl-right">
-            <div class="t-section" style="position:relative">
-                <div class="t-section-label" data-i18n="snlabel.printerConfig">Printer Configuration</div>
+            <div class="t-section" style="text-align:center">
+                <div class="t-section-label" data-i18n="snlabel.resultSection">Result</div>
 
-                <div class="node-indicator">
-                    <div class="node-dot" id="nodeDot"></div>
-                    <span id="nodeTxt" data-i18n="snlabel.serviceChecking">Service …</span>
-                </div>
-
-                <!-- Toggle TCP / USB — same component as the /Print page -->
-                <div class="mode-toggle" id="modeToggle" style="margin-bottom:18px">
-                    <label id="lblTcp" class="active">
-                        <input type="radio" name="sakura-print-mode" value="tcp" checked />
-                        <span class="mode-icon">🌐</span>
-                        <span>TCP / IP</span>
-                    </label>
-                    <label id="lblUsb">
-                        <input type="radio" name="sakura-print-mode" value="usb" />
-                        <span class="mode-icon">🔌</span>
-                        <span>USB</span>
-                    </label>
-                </div>
-
-                <!-- TCP block -->
-                <div id="tcpBlock">
-                    <div class="t-grid t-grid-2 printer-grid">
-                        <div class="t-field">
-                            <label data-i18n="snlabel.printerIp">Printer IP</label>
-                            <input type="text" id="printerIp" placeholder="192.168.1.100" />
-                        </div>
-                        <div class="t-field">
-                            <label data-i18n="snlabel.port">Port</label>
-                            <input type="number" id="printerPort" value="9100" />
-                        </div>
+                <div class="snl-circle-wrap">
+                    <div class="snl-circle idle" id="snlCircle">
+                        <span id="snlCircleText">—</span>
                     </div>
                 </div>
 
-                <!-- USB block -->
-                <div id="usbBlock" style="display:none">
-                    <div class="usb-row">
-                        <div class="t-field">
-                            <label data-i18n="snlabel.usbPrinter">USB Printer</label>
-                            <select id="usbSelect" disabled>
-                                <option value="" data-i18n="snlabel.usbScanHint">— Click 🔄 to scan —</option>
-                            </select>
-                            <div class="usb-status" id="usbStatus"></div>
-                        </div>
-                        <button class="btn-icon" id="btnRefreshUsb" type="button" data-i18n-title="snlabel.refreshUsbTitle" title="Rescan printers">
-                            <span data-i18n="snlabel.refreshUsb">🔄 Refresh</span>
-                        </button>
-                    </div>
-                </div>
-
-                <div class="t-grid t-grid-2" style="margin-top:14px">
-                    <div class="t-field">
-                        <label data-i18n="snlabel.copies">Copies</label>
-                        <input type="number" id="copies" value="1" min="1" max="10" />
-                    </div>
-                </div>
-                <div class="t-actions" style="margin-top:16px">
-                    <button class="t-btn t-btn-ghost" id="btnSavePrinter" data-i18n="snlabel.save">Save</button>
-                </div>
-            </div>
-
-            <div class="t-section">
-                <div class="t-section-label" data-i18n="snlabel.selectionStatus">Selection Status</div>
-
-                <div class="snl-readout">
+                <div class="snl-readout" id="snlResultResolved" style="display:none">
                     <div class="snl-readout-row">
-                        <span class="k" data-i18n="snlabel.lastPrinted">Last Printed</span>
-                        <span class="v" id="stLast">—</span>
-                    </div>
-                    <div class="snl-readout-row">
-                        <span class="k" data-i18n="snlabel.nextSerial">Next Serial</span>
-                        <span class="v big" id="stNext">—</span>
-                    </div>
-                    <div class="snl-readout-row">
-                        <span class="k" data-i18n="snlabel.printedToday">Printed Today</span>
-                        <span class="v" id="stCount">0</span>
+                        <span class="k" data-i18n="snlabel.ean">EAN</span>
+                        <span class="v" id="resEan">—</span>
                     </div>
                     <div class="snl-readout-row" style="border-bottom:none;padding-bottom:0">
-                        <span class="k" data-i18n="snlabel.capacityLeft">Capacity Left</span>
-                        <span class="v muted" id="stRemaining">—</span>
+                        <span class="k" data-i18n="snlabel.serialNumber">Serial Number</span>
+                        <span class="v" id="resSerial">—</span>
                     </div>
                 </div>
             </div>
 
             <div class="t-section">
-                <div class="t-section-label" data-i18n="snlabel.colorSummary">Color Summary</div>
-                <div class="snl-summary-grid" id="summaryGrid"></div>
+                <div class="t-section-label" data-i18n="snlabel.processSection">Process</div>
+                <div class="snl-steps" id="snlSteps">
+                    <div class="snl-step" id="snlStep1Row">
+                        <div class="snl-step-icon" id="snlStep1Icon">1</div>
+                        <div class="snl-step-label" data-i18n="snlabel.step1Label">Check EAN</div>
+                    </div>
+                    <div class="snl-step" id="snlStep2Row">
+                        <div class="snl-step-icon" id="snlStep2Icon">2</div>
+                        <div class="snl-step-label" data-i18n="snlabel.step2Label">Check Color &amp; Serial Number</div>
+                    </div>
+                    <div class="snl-step snl-substep" id="snlStep2aRow">
+                        <div class="snl-step-icon" id="snlStep2aIcon">2.1</div>
+                        <div class="snl-step-label" data-i18n="snlabel.step2aLabel">Check Color</div>
+                    </div>
+                    <div class="snl-step snl-substep" id="snlStep2bRow">
+                        <div class="snl-step-icon" id="snlStep2bIcon">2.2</div>
+                        <div class="snl-step-label" data-i18n="snlabel.step2bLabel">Check Serial Number</div>
+                    </div>
+                    <div class="snl-step" id="snlStep3Row">
+                        <div class="snl-step-icon" id="snlStep3Icon">3</div>
+                        <div class="snl-step-label" data-i18n="snlabel.step3Label">Print Label</div>
+                        <div class="snl-retry-actions" id="snlRetryBox" style="display:none">
+                            <button type="button" class="snl-retry-btn primary" id="btnSnlTryAgain" data-i18n="snlabel.tryAgainBtn" title="">🔄 Try Again</button>
+                            <button type="button" class="snl-retry-btn ghost" id="btnSnlSkip" data-i18n="snlabel.skipBtn">Skip →</button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -549,6 +675,7 @@
 (function () {
     const BASE = '@Url.Content("~")'.replace(/\/$/, '');
     const NODE_SERVICE = 'http://localhost:8021';
+    const LS_WO_KEY = 'sakura_snlabel_wo';
 
     // t() reads the current language live via SakuraI18n — keeps dynamically
     // rendered text (color summary cards) in sync with the EN/ZH flag.
@@ -578,8 +705,6 @@
     const $variant    = document.getElementById('variant');
     const $quantity   = document.getElementById('quantity');
     const $colorDot   = document.getElementById('colorDot');
-    const $btnPrint   = document.getElementById('btnPrint');
-    const $btnRefresh = document.getElementById('btnRefresh');
     const $printStatus= document.getElementById('printStatus');
     const $serialSection = document.getElementById('serialOutputSection');
     const $serialList = document.getElementById('serialList');
@@ -589,9 +714,22 @@
     const $printerPort = document.getElementById('printerPort');
     const $copies      = document.getElementById('copies');
     const $btnSavePrinter = document.getElementById('btnSavePrinter');
+    const $printerSavedHint = document.getElementById('printerSavedHint');
 
     const $nodeDot = document.getElementById('nodeDot');
     const $nodeTxt = document.getElementById('nodeTxt');
+
+    // ── Printer Configuration — collapsed by default to save vertical space ──
+    const $printerConfigBody = document.getElementById('printerConfigBody');
+    const $btnTogglePrinterConfig = document.getElementById('btnTogglePrinterConfig');
+    let printerConfigOpen = false;
+    function setPrinterConfigOpen(open) {
+        printerConfigOpen = open;
+        $printerConfigBody.style.display = open ? '' : 'none';
+        $btnTogglePrinterConfig.classList.toggle('open', open);
+        $btnTogglePrinterConfig.setAttribute('aria-expanded', String(open));
+    }
+    $btnTogglePrinterConfig.addEventListener('click', () => setPrinterConfigOpen(!printerConfigOpen));
 
     const $lblTcp   = document.getElementById('lblTcp');
     const $lblUsb   = document.getElementById('lblUsb');
@@ -605,11 +743,31 @@
     let bridgeOnline = false;
     const $printerHint = document.getElementById('printerHint');
 
+    // ── EAN + Serial Number scan (Process: Check EAN -> Check Color & Serial Number -> Print Label) ──
+    const $eanInput = document.getElementById('eanInput');
+    const $snInput = document.getElementById('snInput');
+    const $snlCircle = document.getElementById('snlCircle');
+    const $snlCircleText = document.getElementById('snlCircleText');
+    const $snlResultResolved = document.getElementById('snlResultResolved');
+    const $resEan = document.getElementById('resEan');
+    const $resSerial = document.getElementById('resSerial');
+    const $snlRetryBox = document.getElementById('snlRetryBox');
+    const $btnSnlTryAgain = document.getElementById('btnSnlTryAgain');
+    const $btnSnlSkip = document.getElementById('btnSnlSkip');
+
+    let expectedProductId = null; // product_id (Odoo) của WO đang chọn — lấy từ lookupWorkOrder
+    let expectedColorValue = null; // màu (chuỗi "Blue"/"Pink"/"Green") của WO đang chọn
+    let eanVerified = false; // đã quét đúng EAN của WO này chưa
+    let verifiedEan = ''; // giá trị EAN đã verify — gửi kèm lúc verify-serial
+    let pendingRetrySerial = null; // khác null khi đang khóa chờ Try Again/Skip (bước Print Label fail)
+
     // ── Print mode: Work Order (default) vs Manual (password-gated every time) ──
     const $modeTabs   = document.getElementById('modeTabs');
     const $woPanel    = document.getElementById('woPanel');
     const $workOrder  = document.getElementById('workOrder');
     const $btnLookupWo= document.getElementById('btnLookupWo');
+    const $btnSaveWo  = document.getElementById('btnSaveWo');
+    const $btnResetWo = document.getElementById('btnResetWo');
     const $woStatus   = document.getElementById('woStatus');
     const $woResolved = document.getElementById('woResolved');
     const $woColor    = document.getElementById('woColor');
@@ -643,14 +801,8 @@
     let woResolvedOk = false;
     let woTotalQuantity = null; // tổng số lượng của WO theo Odoo, cần gửi kèm lúc PRINT để server re-check
     let woDateLocked = false; // true nếu WO này đã in dở — ngày sản xuất bị khóa theo lần in đầu tiên
+    let woStatusHideTimer = null; // tự ẩn thông báo "✓ Color — N pcs remaining." sau vài giây
 
-    const $stLast = document.getElementById('stLast');
-    const $stNext = document.getElementById('stNext');
-    const $stCount = document.getElementById('stCount');
-    const $stRemaining = document.getElementById('stRemaining');
-    const $summaryGrid = document.getElementById('summaryGrid');
-
-    let lastStatusData = null;
     let lastZpl = '';
     let lastBatchId = '';
 
@@ -665,9 +817,87 @@
         el.className = `t-status show ${type}`;
     }
 
-    function updateColorDot() {
-        const meta = COLOR_META[$variant.value];
-        $colorDot.className = 'swatch-dot ' + (meta ? meta.cls : '');
+    // ── Process step tracker (1 Check EAN / 2.1 Check Color / 2.2 Check Serial Number /
+    // 3 Print Label) + Result circle — mirrors BackPanel/Laser.cshtml's setStepState/flashCircle. ──
+    const STEP_PENDING_TEXT = { '1': '1', '2': '2', '2a': '2.1', '2b': '2.2', '3': '3' };
+
+    function setStepState(key, state) {
+        const $icon = document.getElementById(`snlStep${key}Icon`);
+        const $row = document.getElementById(`snlStep${key}Row`);
+        if (!$icon || !$row) return;
+        $icon.classList.remove('done', 'fail');
+        $row.classList.remove('is-done', 'is-fail');
+        if (state === 'done') {
+            $icon.classList.add('done');
+            $row.classList.add('is-done');
+            $icon.textContent = '✓';
+        } else if (state === 'fail') {
+            $icon.classList.add('fail');
+            $row.classList.add('is-fail');
+            $icon.textContent = '✕';
+        } else {
+            $icon.textContent = STEP_PENDING_TEXT[key] || key;
+        }
+    }
+
+    function resetSteps() {
+        ['1', '2', '2a', '2b', '3'].forEach(k => setStepState(k, 'pending'));
+    }
+
+    // "2. Check Color & Serial Number" là dòng nhóm của 2.1/2.2 — done khi cả 2 sub-step
+    // done, fail khi 1 trong 2 fail, còn lại thì pending.
+    function updateParentStep2() {
+        const $a = document.getElementById('snlStep2aIcon');
+        const $b = document.getElementById('snlStep2bIcon');
+        if ($a && $a.classList.contains('done') && $b && $b.classList.contains('done')) {
+            setStepState('2', 'done');
+        } else if (($a && $a.classList.contains('fail')) || ($b && $b.classList.contains('fail'))) {
+            setStepState('2', 'fail');
+        } else {
+            setStepState('2', 'pending');
+        }
+    }
+
+    let resultTimer = null;
+    function setResult(state, text) {
+        $snlCircle.className = 'snl-circle ' + state;
+        $snlCircleText.textContent = text;
+    }
+    // Hiện PASS/FAIL vài giây rồi tự quay lại idle — không đụng tới $snlResultResolved.
+    function flashResult(state, text) {
+        if (resultTimer) { clearTimeout(resultTimer); resultTimer = null; }
+        setResult(state, text);
+        resultTimer = setTimeout(() => setResult('idle', '—'), 4000);
+    }
+
+    // Khoá EAN + Serial lại — bắt buộc phải Try Again (pass) hoặc Skip trước khi được
+    // quét tiếp, vì bước Print Label (3) chưa hoàn tất cho serial này. Không xoá EAN/Serial
+    // đã nhập để Try Again gọi lại checkSerialAndPrint() dùng đúng giá trị cũ.
+    function lockForPrintRetry(serial, message) {
+        pendingRetrySerial = serial;
+        $eanInput.disabled = true;
+        $snInput.disabled = true;
+        $btnSnlTryAgain.title = message; // hiện đầy đủ lý do khi hover, giữ hàng gọn
+        $snlRetryBox.style.display = 'flex';
+    }
+
+    function unlockPrintRetry() {
+        pendingRetrySerial = null;
+        $eanInput.disabled = false;
+        $snInput.disabled = false;
+        $snlRetryBox.style.display = 'none';
+    }
+
+    function resetVerifyState() {
+        if (resultTimer) { clearTimeout(resultTimer); resultTimer = null; }
+        setResult('idle', '—');
+        $snlResultResolved.style.display = 'none';
+        resetSteps();
+        unlockPrintRetry();
+        eanVerified = false;
+        verifiedEan = '';
+        $eanInput.value = '';
+        $snInput.value = '';
     }
 
     // ── Print mode switching ──────────────────────────────────────────────────
@@ -703,7 +933,6 @@
     function updatePrintButtonState() {
         const printerReady = bridgeOnline && isPrinterConfigured();
         updatePrinterHint(printerReady);
-        $btnPrint.disabled = (entryMode === 'wo' && !woResolvedOk) || !printerReady;
         $btnReprint.disabled = !printerReady;
     }
 
@@ -713,14 +942,6 @@
         $woPanel.style.display = mode === 'wo' ? '' : 'none';
         $reprintSection.style.display = mode === 'manual' ? '' : 'none';
         $printParamsSection.style.display = (mode === 'wo' || MANUAL_PRINT_ENABLED) ? '' : 'none';
-        // Color luôn khóa ở tab Work Order (đến từ Odoo); Quantity thì cho sửa —
-        // để người dùng có thể in ít hơn tổng số lượng WO (vd in trước 100/3000 hôm nay).
-        $variant.disabled = mode === 'wo';
-        $quantity.readOnly = false;
-        $quantity.max = mode === 'wo' ? (woTotalQuantity || WORKORDER_MAX_QUANTITY) : MANUAL_MAX_QUANTITY;
-        // Ngày sản xuất chỉ được chọn tự do khi WO này CHƯA in lần nào — nếu đã in dở,
-        // ngày bị khóa theo lần in đầu tiên (server cũng tự khóa lại dù form gửi gì đi nữa).
-        $prodDate.disabled = mode === 'wo' && woDateLocked;
         updatePrintButtonState();
     }
 
@@ -786,7 +1007,17 @@
         const wo = $workOrder.value.trim();
         woResolvedOk = false;
         $woResolved.style.display = 'none';
+        expectedProductId = null;
+        expectedColorValue = null;
+        resetVerifyState();
         updatePrintButtonState();
+
+        // WO đã đổi so với lần Save gần nhất -> đèn "đã save" không còn đúng nữa.
+        if (wo !== localStorage.getItem(LS_WO_KEY)) {
+            $btnSaveWo.classList.remove('is-saved');
+        }
+
+        clearTimeout(woStatusHideTimer);
 
         if (!wo) {
             showStatus($woStatus, `✗ ${t('snlabel.woEnterFirst', 'Enter a Work Order first.')}`, 'err');
@@ -799,36 +1030,23 @@
             const body = await res.json();
             if (!res.ok || !body.ok) throw new Error(window.SakuraI18n.translateApiError(body, t('snlabel.lookupFailed', 'Lookup failed.')));
 
-            $variant.value = body.data.variant;
-            updateColorDot();
-
             woTotalQuantity = body.data.totalQuantity;
-            // Mặc định điền số lượng còn lại — người dùng có thể sửa xuống thấp hơn
-            // nếu hôm nay chỉ muốn in 1 phần (vd 100/3000), phần còn lại tự động dồn
-            // sang lần in sau cho cùng Work Order này.
-            $quantity.value = body.data.remainingQuantity;
-            $quantity.max = body.data.remainingQuantity;
-
-            // WO đã in dở -> khóa ngày theo lần in đầu tiên (chỉ WO hoàn toàn mới mới
-            // được chọn ngày tự do). Server cũng tự khóa lại dù form gửi giá trị gì.
-            if (body.data.lockedProductionDate) {
-                $prodDate.value = body.data.lockedProductionDate.slice(0, 10);
-                woDateLocked = true;
-            } else {
-                woDateLocked = false;
-            }
-            $prodDate.disabled = woDateLocked;
+            woDateLocked = !!body.data.lockedProductionDate;
+            expectedProductId = body.data.productId ?? null;
+            expectedColorValue = body.data.color;
 
             $woColor.textContent = body.data.color;
-            $woRemaining.textContent = `${body.data.remainingQuantity} / ${body.data.totalQuantity}`;
-            $woPrinted.textContent = body.data.printedQuantity;
+            $woPrinted.textContent = `${body.data.printedQuantity} / ${body.data.totalQuantity}`;
+            $woRemaining.textContent = body.data.remainingQuantity;
             $woResolved.style.display = 'flex';
             woResolvedOk = true;
 
             const lookupMsg = t('snlabel.woLookupSuccess', '{color} — {qty} pcs remaining.')
                 .replace('{color}', body.data.color).replace('{qty}', body.data.remainingQuantity);
             showStatus($woStatus, `✓ ${lookupMsg}`, 'ok');
+            woStatusHideTimer = setTimeout(() => { $woStatus.className = 't-status'; }, 5000);
             loadStatus();
+            $eanInput.focus(); // WO đã lookup xong -> bước tiếp theo là quét EAN
         } catch (e) {
             showStatus($woStatus, `✗ ${e.message}`, 'err');
         } finally {
@@ -845,10 +1063,305 @@
             woResolvedOk = false;
             woTotalQuantity = null;
             woDateLocked = false;
-            $prodDate.disabled = false;
+            expectedProductId = null;
+            expectedColorValue = null;
             $woResolved.style.display = 'none';
+            resetVerifyState();
             updatePrintButtonState();
         }
+    });
+
+    // ── Save / Reset Work Order — Save ghi WO hiện tại vào localStorage để lần
+    // sau mở trang tự điền + lookup lại; Reset xóa ô nhập và mọi state đã resolve.
+    $btnSaveWo.addEventListener('click', () => {
+        const wo = $workOrder.value.trim();
+        if (!wo) {
+            showStatus($woStatus, `✗ ${t('snlabel.woEnterFirst', 'Enter a Work Order first.')}`, 'err');
+            return;
+        }
+        localStorage.setItem(LS_WO_KEY, wo);
+        showStatus($woStatus, `✓ ${t('snlabel.woSavedMsg', 'Work Order saved.')}`, 'ok');
+        clearTimeout(woStatusHideTimer);
+        woStatusHideTimer = setTimeout(() => { $woStatus.className = 't-status'; }, 5000);
+        $btnSaveWo.classList.add('is-saved');
+    });
+
+    $btnResetWo.addEventListener('click', () => {
+        clearTimeout(woStatusHideTimer);
+        $workOrder.value = '';
+        woResolvedOk = false;
+        woTotalQuantity = null;
+        woDateLocked = false;
+        expectedProductId = null;
+        expectedColorValue = null;
+        $woResolved.style.display = 'none';
+        resetVerifyState();
+        localStorage.removeItem(LS_WO_KEY);
+        $woStatus.className = 't-status';
+        $btnSaveWo.classList.remove('is-saved');
+        updatePrintButtonState();
+        $workOrder.focus();
+    });
+
+    // ── Process — Step 1: Check EAN ─────────────────────────────────────────────
+    // Quét/nhập EAN xong Enter -> so khớp với mã EAN thật của Work Order (API
+    // ean-lookup). Khớp thì tích xanh bước 1 và nhảy focus sang Serial Number.
+    async function checkEan() {
+        const ean = $eanInput.value.trim();
+        if (!woResolvedOk) {
+            showStatus($printStatus, `✗ ${t('snlabel.eanNeedWoFirst', 'Look up a Work Order first.')}`, 'err');
+            return;
+        }
+        if (!ean) {
+            showStatus($printStatus, `✗ ${t('snlabel.eanEnterFirst', 'Enter an EAN first.')}`, 'err');
+            return;
+        }
+
+        setStepState('1', 'pending');
+        try {
+            const res = await fetch(`${BASE}/api/sakura/snlabel/ean-lookup?workOrder=${encodeURIComponent($workOrder.value.trim())}`);
+            const body = await res.json();
+            if (!res.ok || !body.ok) throw new Error(window.SakuraI18n.translateApiError(body, t('snlabel.eanLookupFailed', 'EAN lookup failed.')));
+
+            if (body.data.ean && body.data.ean.trim().toLowerCase() === ean.toLowerCase()) {
+                setStepState('1', 'done');
+                eanVerified = true;
+                verifiedEan = ean;
+                $resEan.textContent = ean;
+                $snlResultResolved.style.display = 'flex';
+                showStatus($printStatus, `✓ ${t('snlabel.eanMatch', 'EAN matches this Work Order.')}`, 'ok');
+                $snInput.focus();
+            } else {
+                setStepState('1', 'fail');
+                eanVerified = false;
+                verifiedEan = '';
+                flashResult('fail', t('snlabel.fail', 'FAIL'));
+                showStatus($printStatus, `✗ ${t('snlabel.eanMismatch', 'Scanned EAN does not match this Work Order.')}`, 'err');
+                // EAN sai chặn ngay tại đây, không đi qua verify-serial -> phải tự ghi log
+                // riêng, nếu không lần fail này sẽ mất dấu hoàn toàn trong lịch sử.
+                fetch(`${BASE}/api/sakura/snlabel/log-ean-fail`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ workOrder: $workOrder.value.trim(), ean })
+                }).catch(() => {});
+                $eanInput.value = '';
+                $eanInput.focus();
+            }
+        } catch (e) {
+            setStepState('1', 'fail');
+            eanVerified = false;
+            verifiedEan = '';
+            showStatus($printStatus, `✗ ${e.message}`, 'err');
+            $eanInput.value = '';
+            $eanInput.focus();
+        }
+    }
+
+    $eanInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); checkEan(); }
+    });
+    $eanInput.addEventListener('input', () => {
+        if (eanVerified) {
+            eanVerified = false;
+            setStepState('1', 'pending');
+            updateParentStep2();
+        }
+    });
+
+    // ── Process — Step 2 (2.1/2.2) + Step 3: Check Color & Serial Number, Print Label ──
+    // Gửi cả EAN + Serial cho server verify lại toàn bộ (không tin riêng client) — pass hết
+    // thì server trả ZPL sẵn sàng in đúng Serial đã quét, không tự sinh serial mới.
+    async function printGivenZpl(zpl) {
+        const copies = parseInt($copies.value) || 1;
+        try {
+            if (printMode === 'usb') {
+                const printerName = $usbSelect.value;
+                if (!printerName) return false;
+                for (let i = 0; i < copies; i++) await sendToBridgeUsb(zpl, printerName);
+            } else {
+                const printerIp = $printerIp.value.trim();
+                if (!printerIp) return false;
+                const printerPort = parseInt($printerPort.value) || 9100;
+                for (let i = 0; i < copies; i++) await sendToBridge(zpl, printerIp, printerPort);
+            }
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    // Báo kết quả in về server để chốt Status/FailedStep của dòng log (logId) đang PENDING.
+    // Thử tối đa 2 lần (mạng chập chờn) — nếu vẫn lỗi cả 2 lần thì trả false để caller BÁO
+    // CHO OPERATOR BIẾT, thay vì âm thầm bỏ qua như trước (dòng log sẽ kẹt mãi ở PENDING mà
+    // không ai hay — dù thực tế tem vẫn in ra bình thường).
+    async function reportPrintResult(logId, success) {
+        for (let attempt = 1; attempt <= 2; attempt++) {
+            try {
+                const res = await fetch(`${BASE}/api/sakura/snlabel/report-print-result`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ logId, success })
+                });
+                const body = await res.json().catch(() => null);
+                if (res.ok && body && body.ok) return true;
+            } catch (e) { /* thử lại */ }
+            if (attempt < 2) await new Promise(r => setTimeout(r, 800));
+        }
+        return false;
+    }
+
+    // failedStep server trả về (1=EAN, 2=Color, 3=Serial/đã nhập KQSX) -> message i18n phía
+    // client, KHÔNG hiện nguyên văn message tiếng Việt server trả (server chỉ dùng nó để
+    // ghi FailReason nội bộ nếu cần sau này, còn hiển thị luôn phải qua i18n EN/ZH).
+    function verifyFailMessage(failedStep) {
+        if (failedStep === 1) return t('snlabel.eanMismatch', 'Scanned EAN does not match this Work Order.');
+        if (failedStep === 2) return t('snlabel.colorMismatch', 'Serial color does not match this Work Order.');
+        if (failedStep === 3) return t('snlabel.serialNotEntered', 'This serial has not had a production result entered yet.');
+        return t('snlabel.verifyFailed', 'Verify failed.');
+    }
+
+    // Fail ở bước 1 (Check EAN) hoặc 2 (Check Color & Serial Number) -> reset về đầu,
+    // quét lại EAN từ đầu (không khoá, không cần Try Again/Skip).
+    function restartFromEan(message) {
+        flashResult('fail', t('snlabel.fail', 'FAIL'));
+        showStatus($printStatus, `✗ ${t('snlabel.fail', 'FAIL')} — ${message}`, 'err');
+        $snInput.value = '';
+        $eanInput.value = '';
+        eanVerified = false;
+        verifiedEan = '';
+        $eanInput.focus();
+    }
+
+    async function checkSerialAndPrint() {
+        const serial = $snInput.value.trim();
+        if (!eanVerified) {
+            showStatus($printStatus, `✗ ${t('snlabel.serialNeedEanFirst', 'Scan a matching EAN first.')}`, 'err');
+            return;
+        }
+        if (!serial) {
+            showStatus($printStatus, `✗ ${t('snlabel.serialEnterFirst', 'Enter a Serial Number first.')}`, 'err');
+            return;
+        }
+        if (!bridgeOnline || !isPrinterConfigured()) {
+            showStatus($printStatus, `✗ ${printerNotReadyMessage()}`, 'err');
+            return;
+        }
+
+        setStepState('2a', 'pending');
+        setStepState('2b', 'pending');
+        setStepState('2', 'pending');
+        setStepState('3', 'pending');
+        $resSerial.textContent = serial;
+        $snlResultResolved.style.display = 'flex';
+
+        try {
+            const res = await fetch(`${BASE}/api/sakura/snlabel/verify-serial`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    workOrder: $workOrder.value.trim(),
+                    productId: expectedProductId,
+                    expectedColor: expectedColorValue,
+                    ean: verifiedEan,
+                    serialNumber: serial
+                })
+            });
+            const body = await res.json();
+            if (!res.ok && res.status !== 409) throw new Error(window.SakuraI18n.translateApiError(body, t('snlabel.verifyFailed', 'Verify failed.')));
+
+            if (res.status === 409) {
+                setStepState('2a', 'fail');
+                updateParentStep2();
+                restartFromEan(window.SakuraI18n.translateApiError(body, t('snlabel.serialAlreadyPrinted', 'This serial has already been printed.')));
+                return;
+            }
+
+            const d = body.data;
+
+            if (d.failedStep === 1) {
+                setStepState('1', 'fail');
+                restartFromEan(verifyFailMessage(1));
+                return;
+            }
+            setStepState('1', 'done');
+
+            if (d.failedStep === 2) {
+                setStepState('2a', 'fail');
+                updateParentStep2();
+                restartFromEan(verifyFailMessage(2));
+                return;
+            }
+            setStepState('2a', 'done');
+
+            if (d.failedStep === 3) {
+                setStepState('2b', 'fail');
+                updateParentStep2();
+                restartFromEan(verifyFailMessage(3));
+                return;
+            }
+            setStepState('2b', 'done');
+            updateParentStep2();
+
+            // Check EAN + Color + Serial đã pass hết -> in luôn với đúng Serial vừa quét.
+            const printOk = await printGivenZpl(d.zpl);
+            const reportOk = await reportPrintResult(d.logId, printOk);
+            const reportWarning = reportOk ? '' : ` ⚠ ${t('snlabel.reportResultFailed', 'Could not confirm the result with the server — the history record may stay stuck at PENDING.')}`;
+
+            if (printOk) {
+                setStepState('3', 'done');
+                flashResult('pass', t('snlabel.pass', 'PASS'));
+                showStatus($printStatus, `✓ ${t('snlabel.pass', 'PASS')} — ${serial}${reportWarning}`, reportOk ? 'ok' : 'err');
+                unlockPrintRetry();
+                $snInput.value = '';
+                $eanInput.value = '';
+                eanVerified = false;
+                verifiedEan = '';
+                $eanInput.focus();
+            } else {
+                // Check EAN + Color + Serial đều đã pass — chỉ riêng gửi máy in lỗi (mất kết
+                // nối bridge, máy in tắt...) — khoá lại, cho Try Again (không phải quét lại
+                // từ đầu vì dữ liệu đã hợp lệ) hoặc Skip để bỏ qua serial này.
+                setStepState('3', 'fail');
+                flashResult('fail', t('snlabel.fail', 'FAIL'));
+                const failMsg = t('snlabel.printSendFailed', 'Failed to send to printer.');
+                showStatus($printStatus, `✗ ${t('snlabel.fail', 'FAIL')} — ${failMsg}${reportWarning}`, 'err');
+                lockForPrintRetry(serial, `⚠ ${t('snlabel.step3Label', 'Print Label')} (SN ${serial}) — ${failMsg}`);
+            }
+        } catch (e) {
+            flashResult('fail', t('snlabel.fail', 'FAIL'));
+            showStatus($printStatus, `✗ ${e.message}`, 'err');
+            // Vd Serial sai định dạng, lỗi mạng... — vẫn phải xóa ô Serial để quét lại ngay,
+            // EAN đã verify vẫn giữ nguyên (chưa có gì chứng minh EAN sai cả).
+            $snInput.value = '';
+            $snInput.focus();
+        }
+    }
+
+    $snInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); checkSerialAndPrint(); }
+    });
+
+    // Try Again: gọi lại đúng checkSerialAndPrint() với cùng EAN/Serial đang khoá (không xoá
+    // khi lock) — server verify-serial là idempotent nên EAN/Color/Serial sẽ tự pass lại y hệt,
+    // chỉ thử lại đúng bước gửi máy in đang fail.
+    $btnSnlTryAgain.addEventListener('click', async () => {
+        if (!pendingRetrySerial) return;
+        $btnSnlTryAgain.disabled = true;
+        showStatus($printStatus, `⏳ ${t('snlabel.retryInProgress', 'Retrying…')}`, 'ok');
+        unlockPrintRetry();
+        await checkSerialAndPrint();
+        $btnSnlTryAgain.disabled = false;
+    });
+
+    $btnSnlSkip.addEventListener('click', () => {
+        if (!pendingRetrySerial) return;
+        unlockPrintRetry();
+        showStatus($printStatus, `⚠ ${t('snlabel.skippedMsg', 'Skipped — you can scan the next EAN.')}`, 'err');
+        $snInput.value = '';
+        $eanInput.value = '';
+        eanVerified = false;
+        verifiedEan = '';
+        $eanInput.focus();
     });
 
     // ── Reprint by Serial (Manual mode) ───────────────────────────────────────
@@ -926,7 +1439,9 @@
         ip: 'sakura_snlabel_ip',
         port: 'sakura_snlabel_port',
         copies: 'sakura_snlabel_copies',
-        mode: 'sakura_snlabel_print_mode'
+        mode: 'sakura_snlabel_print_mode',
+        usbName: 'sakura_snlabel_usb_name',
+        saved: 'sakura_snlabel_printer_saved'
     };
 
     function loadPrinterConfig() {
@@ -935,13 +1450,22 @@
         if (v(LS.port)) $printerPort.value = v(LS.port);
         if (v(LS.copies)) $copies.value = v(LS.copies);
         setPrintMode(v(LS.mode) === 'usb' ? 'usb' : 'tcp');
+
+        // Đã từng Save trước khi F5 -> hiện lại đèn "✓ Saved" ngay (không chờ bấm lại Save).
+        if (v(LS.saved) === '1') {
+            $printerSavedHint.classList.add('show');
+        }
     }
 
     $btnSavePrinter.addEventListener('click', () => {
         localStorage.setItem(LS.ip, $printerIp.value.trim());
         localStorage.setItem(LS.port, $printerPort.value.trim());
         localStorage.setItem(LS.copies, $copies.value.trim());
-        showStatus($printStatus, t('snlabel.printerConfigSaved', '✓ Printer configuration saved.'), 'ok');
+        localStorage.setItem(LS.usbName, $usbSelect.value || '');
+        localStorage.setItem(LS.saved, '1');
+
+        // Giữ nguyên "✓ Saved" cho tới khi refresh trang — không tự ẩn.
+        $printerSavedHint.classList.add('show');
     });
 
     // Browser → local bridge (localhost:8021) → printer, same flow as Toast / FQC pages.
@@ -994,6 +1518,14 @@
             $usbSelect.disabled = false;
             $usbStatus.textContent = t('snlabel.usbFoundCount', '✓ Found {n} printer(s).').replace('{n}', data.printers.length);
             $usbStatus.className = 'usb-status ok';
+
+            // Tự chọn lại máy in USB đã Save trước đó, nếu vẫn có trong danh sách quét được
+            // (F5 lại trang xong quét USB thì không phải chọn tay lại từ đầu).
+            const savedUsbName = localStorage.getItem(LS.usbName);
+            if (savedUsbName && data.printers.includes(savedUsbName)) {
+                $usbSelect.value = savedUsbName;
+            }
+            updatePrintButtonState();
         } catch (err) {
             $usbSelect.innerHTML = `<option value="">${t('snlabel.usbLoadError', '— Load error —')}</option>`;
             $usbStatus.textContent = t('snlabel.usbCannotConnect', 'Cannot connect to localhost:8021.');
@@ -1001,7 +1533,10 @@
         }
     }
 
-    $btnRefreshUsb.addEventListener('click', loadUsbPrinters);
+    $btnRefreshUsb.addEventListener('click', () => {
+        $printerSavedHint.classList.remove('show');
+        loadUsbPrinters();
+    });
 
     // ── Local Bridge health check — same pattern as the /Print page ──────────
     async function checkNode() {
@@ -1035,44 +1570,10 @@
         }
     }
 
-    async function loadStatus() {
-        const params = new URLSearchParams({
-            date: $prodDate.value,
-            variant: $variant.value,
-            line: $line.value
-        });
-        try {
-            const res = await fetch(`${BASE}/api/sakura/snlabel/status?${params}`);
-            const body = await res.json();
-            if (!res.ok || !body.ok) throw new Error(window.SakuraI18n.translateApiError(body, t('snlabel.statusLoadFailed', 'Failed to load status.')));
-            renderStatus(body.data);
-        } catch (e) {
-            $stLast.textContent = '—';
-            $stNext.textContent = '—';
-            $stCount.textContent = '0';
-            $stRemaining.textContent = '—';
-            $summaryGrid.innerHTML = `<div style="grid-column:1/-1;font-family:var(--mono);font-size:11px;color:var(--stamp)">✗ ${e.message}</div>`;
-        }
-    }
-
-    function renderStatus(data) {
-        lastStatusData = data;
-        $stLast.textContent = data.lastSerial || t('snlabel.noneYet', 'None yet');
-        $stNext.textContent = data.nextSerial || '—';
-        $stCount.textContent = data.count;
-        $stRemaining.textContent = data.remainingCapacity.toLocaleString();
-
-        $summaryGrid.innerHTML = data.colorSummary.map(s => {
-            const meta = COLOR_META[s.variant] || { name: s.color, cls: '' };
-            const active = s.variant === $variant.value ? ' active' : '';
-            return `
-                <div class="snl-summary-card${active}">
-                    <div class="name"><span class="swatch-dot ${meta.cls}"></span>${meta.name}</div>
-                    <div class="count">${s.count}</div>
-                    <div class="last">${s.lastSerial || t('snlabel.noneYet', 'None yet')}</div>
-                </div>`;
-        }).join('');
-    }
+    // Status tổng hợp (last/next serial, color summary) từng hiển thị ở khối
+    // Selection Status / Color Summary — cả 2 đã bị bỏ khỏi UI nên hàm này tạm
+    // không còn tác dụng hiển thị, giữ lại làm no-op để các chỗ gọi cũ không lỗi.
+    async function loadStatus() {}
 
     function downloadZplFile(zpl, filename) {
         const blob = new Blob([zpl], { type: 'text/plain' });
@@ -1086,141 +1587,26 @@
         URL.revokeObjectURL(url);
     }
 
-    // Nhập thủ công giữ mức thấp để tránh gõ nhầm; in theo Work Order tin tưởng
-    // số liệu từ Odoo nên cho phép cao hơn (khớp với SakuraService.ManualMaxQuantity /
-    // WorkOrderMaxQuantity ở server).
-    const MANUAL_MAX_QUANTITY = 500;
-    const WORKORDER_MAX_QUANTITY = 5000;
-
-    async function doPrint() {
-        // Ở tab Work Order, giới hạn thật là "còn lại bao nhiêu" (đã lookup và ghi vào
-        // $quantity.max), không phải trần cứng 5000 — người dùng có thể in ít hơn
-        // (vd 100/3000 hôm nay), phần dư tự động dồn sang lần in kế tiếp cho cùng WO.
-        const maxQty = entryMode === 'wo' ? (parseInt($quantity.max) || WORKORDER_MAX_QUANTITY) : MANUAL_MAX_QUANTITY;
-        const qty = parseInt($quantity.value) || 0;
-        if (qty < 1 || qty > maxQty) {
-            const rangeMsg = t('snlabel.quantityRange', 'Quantity must be between 1 and {max}.').replace('{max}', maxQty);
-            showStatus($printStatus, `✗ ${rangeMsg}`, 'err');
-            return;
-        }
-
-        $btnPrint.disabled = true;
-        try {
-            const res = await fetch(`${BASE}/api/sakura/snlabel/print`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    date: $prodDate.value,
-                    variant: $variant.value,
-                    line: $line.value,
-                    quantity: qty,
-                    workOrder: entryMode === 'wo' ? $workOrder.value.trim() : null
-                })
-            });
-            const body = await res.json();
-            if (!res.ok || body.ok === false) throw new Error(window.SakuraI18n.translateApiError(body, t('snlabel.printFailed', 'Print failed.')));
-
-            lastZpl = body.zpl;
-            lastBatchId = body.batchId;
-
-            $serialSection.style.display = 'block';
-            $serialList.innerHTML = body.serials.map((s, i) =>
-                `<div><span class="idx">${String(i + 1).padStart(3, '0')}</span><span>${s.serialNumber}</span></div>`
-            ).join('');
-
-            let msg = `✓ ${t('snlabel.generatedSerialsMsg', 'Generated {n} serial(s).').replace('{n}', body.serials.length)}`;
-            let statusType = 'ok';
-
-            const copies = parseInt($copies.value) || 1;
-
-            if (printMode === 'usb') {
-                const printerName = $usbSelect.value;
-                if (printerName) {
-                    try {
-                        for (let i = 0; i < copies; i++) {
-                            await sendToBridgeUsb(lastZpl, printerName);
-                        }
-                        msg += t('snlabel.sentToUsbPrinter', ' Sent to USB printer "{name}" (Local Bridge).').replace('{name}', printerName);
-                    } catch (e) {
-                        statusType = 'err';
-                        msg += t('snlabel.sendToPrinterFailed', ' ✗ Failed to send to printer: {error}').replace('{error}', e.message);
-                    }
-                } else {
-                    downloadZplFile(lastZpl, `sn-labels-${lastBatchId}.zpl`);
-                    msg += t('snlabel.printNoUsbSelected', ' No USB printer selected — downloaded .zpl file instead. Scan and select a USB printer above to print directly next time.');
-                }
-            } else {
-                const printerIp = $printerIp.value.trim();
-                const printerPort = parseInt($printerPort.value) || 9100;
-
-                if (printerIp) {
-                    // Browser → Local Bridge (localhost:8021) → printer — same flow as Toast / FQC.
-                    try {
-                        for (let i = 0; i < copies; i++) {
-                            await sendToBridge(lastZpl, printerIp, printerPort);
-                        }
-                        msg += t('snlabel.sentToTcpPrinter', ' Sent to {ip}:{port} (Local Bridge).').replace('{ip}', printerIp).replace('{port}', printerPort);
-                    } catch (e) {
-                        statusType = 'err';
-                        msg += t('snlabel.sendToPrinterFailed', ' ✗ Failed to send to printer: {error}').replace('{error}', e.message);
-                    }
-                } else if (body.printMode === 'DirectTcp') {
-                    msg += body.directPrintSent
-                        ? t('snlabel.directSendSuccess', ' Sent directly from server to printer.')
-                        : t('snlabel.directSendFailed', ' Direct send failed: {error}.').replace('{error}', body.directPrintError || t('snlabel.unknownError', 'unknown error'));
-                    statusType = body.directPrintSent === false ? 'err' : 'ok';
-                } else {
-                    downloadZplFile(lastZpl, `sn-labels-${lastBatchId}.zpl`);
-                    msg += t('snlabel.printNoIpSet', ' No printer IP set — downloaded .zpl file instead. Fill in the printer IP above to print directly via Local Bridge next time.');
-                }
-            }
-            showStatus($printStatus, msg, statusType);
-
-            // Work Order mode: require a fresh scan/lookup before the next print
-            // (also re-fetches the up-to-date remaining quantity for this WO),
-            // instead of letting the same resolved quantity be reused blindly.
-            if (entryMode === 'wo') {
-                woResolvedOk = false;
-                woTotalQuantity = null;
-                woDateLocked = false;
-                $prodDate.disabled = false;
-                $workOrder.value = '';
-                $woResolved.style.display = 'none';
-                $woStatus.className = 't-status';
-            }
-
-            await loadStatus();
-        } catch (e) {
-            showStatus($printStatus, `✗ ${e.message}`, 'err');
-        } finally {
-            updatePrintButtonState();
-        }
-    }
-
     $btnDownload.addEventListener('click', () => {
         if (!lastZpl) return;
         downloadZplFile(lastZpl, `sn-labels-${lastBatchId}.zpl`);
     });
 
-    $variant.addEventListener('change', () => { updateColorDot(); loadStatus(); });
-    $line.addEventListener('change', loadStatus);
-    $prodDate.addEventListener('change', loadStatus);
-    $btnRefresh.addEventListener('click', loadStatus);
-    $btnPrint.addEventListener('click', doPrint);
-
-    // Re-render locally-cached status (color names / line labels) when EN/ZH
-    // is switched, without hitting the API again.
-    document.addEventListener('sakura:lang-changed', () => {
-        if (lastStatusData) renderStatus(lastStatusData);
-    });
-
     // ── init ──────────────────────────────────────────────────────────────────
-    $prodDate.value = todayStr();
+    setPrinterConfigOpen(false);
     loadPrinterConfig();
-    updateColorDot();
     loadStatus();
     setMode('wo'); // Work Order is always the default mode on page load
-    $workOrder.focus();
+
+    // Khôi phục WO đã Save lần trước (nếu có) và tự lookup lại luôn.
+    const savedWo = localStorage.getItem(LS_WO_KEY);
+    if (savedWo) {
+        $workOrder.value = savedWo;
+        $btnSaveWo.classList.add('is-saved');
+        lookupWorkOrder();
+    } else {
+        $workOrder.focus();
+    }
 })();
 </script>
 }

@@ -11,6 +11,7 @@ public class AppDbContext : DbContext
     public DbSet<PrinterInfo> PrinterInfos { get; set; }
     public DbSet<SVNToastSerialInfo> SVNToastSerialInfos { get; set; }
     public DbSet<SnLabelPrint> SnLabelPrints { get; set; }
+    public DbSet<SnLabelScanLog> SnLabelScanLogs { get; set; }
     public DbSet<SakuraZplTemplate> SakuraZplTemplates { get; set; }
     public DbSet<SvnDefectCookie> SvnDefectCookies { get; set; }
     public DbSet<BackPanelLaserLog> BackPanelLaserLogs { get; set; }
