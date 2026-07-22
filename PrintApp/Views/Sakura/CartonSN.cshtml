@@ -662,15 +662,26 @@
         }
     }
 
-    $cartonNumber.addEventListener('keydown', async (e) => {
-        if (e.key !== 'Enter') return;
-        e.preventDefault();
+    // Quét xong (máy quét thường không tự gửi Enter) → debounce 200ms rồi tự check + nhảy
+    // xuống ô Serial đầu tiên, không cần bấm Enter thủ công nữa. Enter vẫn hoạt động để check
+    // ngay lập tức cho ai gõ tay muốn xác nhận luôn.
+    let cartonNumberDebounce;
+    async function checkCartonNumberAndAdvance() {
+        clearTimeout(cartonNumberDebounce);
         const ok = await verifyCartonNumber();
         if (ok) document.querySelector('#serialGrid input')?.focus();
+    }
+
+    $cartonNumber.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        checkCartonNumberAndAdvance();
     });
     $cartonNumber.addEventListener('input', () => {
         $cartonNumber.classList.remove('invalid');
         hideStatus($cartonNumberStatus);
+        clearTimeout(cartonNumberDebounce);
+        cartonNumberDebounce = setTimeout(checkCartonNumberAndAdvance, 200);
     });
 
     // ── Serial numbers grid — quét barcode hoặc nhập tay (same pattern as /toast) ──
