@@ -671,23 +671,39 @@ public class SakuraService
             throw new SakuraConflictException("cartonLabel.serialAlreadyUsed", $"Serial đã được quét/in trước đó: {joined}.", new { serial = joined });
         }
 
+        return await RenderCartonZplAsync(trimmedCartonNumber, meta, condition, slots, nonEmptySerials);
+    }
+
+    // Phần render ZPL thuần (đọc template + thay placeholder) — tách riêng khỏi phần validate/
+    // check DB ở BuildCartonLabelZplAsync cho dễ đọc.
+    private async Task<string> RenderCartonZplAsync(string cartonNumber, (string SkuPvId, string Description) meta, string condition, List<string> slots, List<string> nonEmptySerials)
+    {
         string template = await GetZplTemplateAsync("CartonLabel");
 
         string zpl = template
-            .Replace("{cartonNumber}", trimmedCartonNumber)
+            .Replace("{cartonNumber}", cartonNumber)
             .Replace("{skuPvId}", meta.SkuPvId)
             .Replace("{description}", meta.Description)
             .Replace("{quantity}", nonEmptySerials.Count.ToString())
             .Replace("{condition}", condition)
             .Replace("{pdf417Data}", string.Join(",", nonEmptySerials));
 
-        // Ô nào không có serial thì thay bằng chuỗi rỗng — field text/barcode tương ứng vẫn
-        // còn trên tem nhưng không in ra gì (^FD^FS rỗng hợp lệ).
+        // CHỈ thay {snN} cho ô CÓ serial — ô trống (carton lẻ hộp, index > N) để nguyên
+        // placeholder "{snN}", KHÔNG thay bằng chuỗi rỗng. Text field rỗng ("^FD^FS") thì không
+        // in ra gì, nhưng barcode Code128 ("^BC") với dữ liệu rỗng vẫn khiến máy in vẽ ra 1 vạch
+        // vô nghĩa/lởm chởm (start+stop+checksum không nội dung) — nên phải xóa HẲN CẢ 2 dòng
+        // (text lẫn barcode) của ô trống ở bước sau, không chỉ riêng dòng barcode.
         for (int i = 0; i < ZplTemplates.CartonSnPlaceholderCount; i++)
         {
-            string value = i < slots.Count ? slots[i] : "";
-            zpl = zpl.Replace($"{{sn{i + 1}}}", value);
+            if (i < slots.Count && slots[i].Length > 0)
+                zpl = zpl.Replace($"{{sn{i + 1}}}", slots[i]);
         }
+
+        // Xóa mọi dòng còn chứa "{sn" — đây chính xác là các dòng của ô KHÔNG có serial (chưa bị
+        // thay ở trên vì không khớp điều kiện), gồm cả dòng text lẫn dòng barcode. Xóa theo cách
+        // này chắc chắn không sót placeholder nào và không đụng tới bất kỳ field nào khác.
+        var lines = zpl.Replace("\r\n", "\n").Split('\n');
+        zpl = string.Join("\n", lines.Where(line => !line.Contains("{sn")));
 
         return zpl;
     }
