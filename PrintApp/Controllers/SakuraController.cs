@@ -93,6 +93,15 @@ public class SakuraController : Controller
                         Subtitle = "Print carton SN labels",
                         Href = Url.Content("~/sakura/cartonsn"),
                         Enabled = true
+                    },
+                    new SakuraAppTile
+                    {
+                        Key = "cartonsnhistory",
+                        Icon = "🕘",
+                        Title = "History",
+                        Subtitle = "Carton SN Label print history",
+                        Href = Url.Content("~/sakura/cartonsn/history"),
+                        Enabled = true
                     }
                 }
             },
@@ -233,6 +242,12 @@ public class SakuraController : Controller
     public IActionResult CartonSnIndex()
     {
         return View("~/Views/Sakura/CartonSN.cshtml");
+    }
+
+    [HttpGet("/sakura/cartonsn/history")]
+    public IActionResult CartonSnHistory()
+    {
+        return View("~/Views/Sakura/CartonSnHistory.cshtml");
     }
 
     // ── API: printer list (for other Sakura pages that need it) ────────────────
@@ -886,6 +901,17 @@ public class SakuraController : Controller
         }
 
         return Ok(new { ok = true });
+    }
+
+    // ── API: Carton SN Label — history (1 dòng = 1 carton đã in) ───────────────
+
+    [HttpGet("/api/sakura/cartonsn/history")]
+    public async Task<IActionResult> CartonSnHistoryApi(
+        [FromQuery] DateTime? dateFrom, [FromQuery] DateTime? dateTo, [FromQuery] string? workOrder, [FromQuery] string? cartonNumber,
+        [FromQuery] string? serial, [FromQuery] string? color, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+    {
+        var result = await _snLabel.GetCartonHistoryAsync(dateFrom, dateTo, workOrder, cartonNumber, serial, color, page, pageSize);
+        return Ok(new { ok = true, data = result });
     }
 
     // ── API: ZPL template CRUD (edit template content without touching code) ──

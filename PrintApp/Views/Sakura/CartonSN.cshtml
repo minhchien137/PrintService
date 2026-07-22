@@ -436,9 +436,9 @@
 
                 <div class="t-actions" style="margin-top:18px">
                     <!-- Quét đủ số ô Serial Number là tự động in luôn (xem handleSerialInput) —
-                         ẩn nút Print thủ công, không cần bấm gì thêm. -->
+                         ẩn cả nút Print lẫn Preview ZPL, không cần bấm gì thêm. -->
                     <button type="button" class="t-btn t-btn-primary" id="btnPrint" data-i18n="cartonsn.printBtn" style="display:none">🖨️ Print Carton Label</button>
-                    <button type="button" class="t-btn t-btn-outline" id="btnPreviewZpl" data-i18n="cartonsn.previewZplBtn">📄 Preview ZPL</button>
+                    <button type="button" class="t-btn t-btn-outline" id="btnPreviewZpl" data-i18n="cartonsn.previewZplBtn" style="display:none">📄 Preview ZPL</button>
                 </div>
                 <div id="printStatus" class="t-status"></div>
             </div>
@@ -447,6 +447,10 @@
                 <a href="@Url.Content("~/sakura")" data-i18n="cartonsn.backHome" style="font-family:var(--font-body);font-size:11px;color:var(--gray-500);
                     letter-spacing:0.5px;text-decoration:none;border-bottom:1px solid var(--gray-200);">
                     ← Sakura Home
+                </a>
+                <a href="@Url.Content("~/sakura/cartonsn/history")" data-i18n="cartonsn.viewHistory" style="font-family:var(--font-body);font-size:11px;color:var(--gray-500);
+                    letter-spacing:0.5px;text-decoration:none;border-bottom:1px solid var(--gray-200);">
+                    View History →
                 </a>
             </div>
 
@@ -767,9 +771,8 @@
         if (idx < inputs.length - 1) {
             inputs[idx + 1].focus();
         } else if (serialList.length === inputs.length) {
-            // Quét đủ số lượng đã đặt → nút Print thật đang tạm ẩn (CARTON_REAL_PRINT_ENABLED),
-            // nên tự động Preview ZPL để xem ngay, không cần bấm nút.
-            if (CARTON_REAL_PRINT_ENABLED) doPrint(); else previewZpl();
+            // Quét đủ số lượng đã đặt → tự động in luôn, không cần bấm nút nào cả.
+            doPrint();
         }
     }
 

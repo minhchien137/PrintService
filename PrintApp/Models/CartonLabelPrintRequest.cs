@@ -38,3 +38,25 @@ public class CartonReportPrintResultRequest
     public string Condition { get; set; } = "";
     public List<string> SerialNumbers { get; set; } = new();
 }
+
+// 1 dòng lịch sử = 1 carton đã in (khớp 1-1 với SM_Sakura_CartonLabel_Data) — dùng cho trang
+// History của Carton SN Label.
+public class CartonSnHistoryItemDto
+{
+    public int Id { get; set; }
+    public string CartonNumber { get; set; } = "";
+    public string WorkOrder { get; set; } = "";
+    public string Color { get; set; } = "";
+    public string Condition { get; set; } = "";
+    public int CountSerial { get; set; }
+    public string Serial { get; set; } = ""; // CSV toàn bộ serial của carton này
+    public DateTime ScanDate { get; set; }
+}
+
+public class CartonSnHistoryPageDto
+{
+    public List<CartonSnHistoryItemDto> Items { get; set; } = new();
+    public int TotalCount { get; set; }
+    public int Page { get; set; }
+    public int PageSize { get; set; }
+}

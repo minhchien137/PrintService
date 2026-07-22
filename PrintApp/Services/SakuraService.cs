@@ -366,6 +366,78 @@ public class SakuraService
         await _context.SaveChangesAsync();
     }
 
+    // Trang History của Carton SN Label — 1 dòng lịch sử = 1 carton đã in (khớp 1-1 với
+    // SM_Sakura_CartonLabel_Data, không phải 1 dòng/serial). Filter theo ngày (ScanDate), Work
+    // Order/Carton Number/Serial (tìm theo substring, Serial search luôn trong cả chuỗi CSV),
+    // và Color (khớp chính xác).
+    public async Task<CartonSnHistoryPageDto> GetCartonHistoryAsync(DateTime? dateFrom, DateTime? dateTo, string? workOrder, string? cartonNumber, string? serial, string? color, int page, int pageSize)
+    {
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 200);
+
+        var query = _context.CartonSnScanLogs.AsNoTracking().AsQueryable();
+
+        if (dateFrom.HasValue)
+            query = query.Where(x => x.ScanDate >= dateFrom.Value.Date);
+
+        if (dateTo.HasValue)
+        {
+            // dateTo bao gồm hết ngày đó (< ngày hôm sau), không phải chỉ tới 00:00.
+            DateTime dateToEnd = dateTo.Value.Date.AddDays(1);
+            query = query.Where(x => x.ScanDate < dateToEnd);
+        }
+
+        if (!string.IsNullOrWhiteSpace(workOrder))
+        {
+            string wo = workOrder.Trim();
+            query = query.Where(x => x.WorkOrder.Contains(wo));
+        }
+
+        if (!string.IsNullOrWhiteSpace(cartonNumber))
+        {
+            string cn = cartonNumber.Trim();
+            query = query.Where(x => x.CartonNumber.Contains(cn));
+        }
+
+        if (!string.IsNullOrWhiteSpace(serial))
+        {
+            string s = serial.Trim();
+            query = query.Where(x => x.Serial.Contains(s));
+        }
+
+        if (!string.IsNullOrWhiteSpace(color))
+        {
+            string c = color.Trim();
+            query = query.Where(x => x.Color == c);
+        }
+
+        int totalCount = await query.CountAsync();
+
+        var rows = await query
+            .OrderByDescending(x => x.ScanDate)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return new CartonSnHistoryPageDto
+        {
+            Items = rows.Select(x => new CartonSnHistoryItemDto
+            {
+                Id = x.Id,
+                CartonNumber = x.CartonNumber,
+                WorkOrder = x.WorkOrder,
+                Color = x.Color ?? "",
+                Condition = x.Condition ?? "",
+                CountSerial = x.CountSerial,
+                Serial = x.Serial,
+                ScanDate = x.ScanDate
+            }).ToList(),
+            TotalCount = totalCount,
+            Page = page,
+            PageSize = pageSize
+        };
+    }
+
     // Ngày sản xuất của lần in đầu tiên cho Work Order này (null nếu chưa in lần nào).
     // Dùng để hiển thị/khóa ô ngày trên form khi lookup lại 1 WO đã in dở.
     public async Task<DateTime?> GetWorkOrderProductionDateAsync(string workOrder)
