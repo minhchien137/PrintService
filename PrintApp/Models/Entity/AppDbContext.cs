@@ -18,6 +18,7 @@ public class AppDbContext : DbContext
     public DbSet<MiddleDimensionCheckResult> MiddleDimensionCheckResults { get; set; }
     public DbSet<ProductionInputLog> ProductionInputLogs { get; set; }
     public DbSet<MiddleLog> MiddleLogs { get; set; }
+    public DbSet<CartonSnScanLog> CartonSnScanLogs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -29,6 +30,13 @@ public class AppDbContext : DbContext
             e.HasIndex(x => x.SerialNumber).IsUnique();
             e.HasIndex(x => new { x.ProductionDate, x.ProductionLine, x.Variant, x.RunningNumberInt })
                 .HasDatabaseName("IX_SM_SNLabelPrint_Counter");
+        });
+
+        modelBuilder.Entity<CartonSnScanLog>(e =>
+        {
+            // Serial giờ là chuỗi CSV nhiều serial/carton trong 1 dòng -> không unique theo cột
+            // này nữa (kiểm tra trùng serial dùng LIKE, xem SakuraService.IsCartonSerialAlreadyUsedAsync).
+            e.HasIndex(x => x.WorkOrder);
         });
 
         modelBuilder.Entity<SakuraZplTemplate>(e =>

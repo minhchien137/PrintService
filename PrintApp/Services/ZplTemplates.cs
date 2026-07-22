@@ -16,40 +16,81 @@ public static class ZplTemplates
 ";
 
     // ⚠ PLACEHOLDER — sẽ được seed vào SM_Sakura_ZplTemplate (key = "CartonLabel").
-    // Xuất từ ZebraDesigner; 10 block bitmap SN gốc đã được thay bằng {snSlots} (xem
-    // ZplTemplates.BuildCartonSnSlotZpl + CartonSnSlots bên dưới).
+    // Nguồn thật để CHỈNH SỬA vẫn là DB — đây chỉ là bản sao khớp với DB tại thời điểm viết,
+    // dùng làm fallback + giá trị seed ban đầu. Xuất trực tiếp từ ZebraDesigner (giữ nguyên
+    // cả khối setup/calibration máy in ở đầu file .prn — ~TA000/~JSN/^PR7,7/~SD15/^JUS...).
+    // 10 ô Serial Number là các placeholder RIÊNG {sn1}..{sn10} — tọa độ/cỡ chữ/barcode của
+    // từng ô đã viết sẵn trong chính template (khác bản cũ dùng 1 khối {snSlots} tự tính toạ
+    // độ) — xem SakuraService.BuildCartonLabelZplAsync, chỉ còn việc thay giá trị vào.
     public const string DefaultCartonLabel = @"^XA
+~TA000
+~JSN
+^LT0
+^MNW
+^MTT
+^PON
+^PMN
+^LH0,0
+^JMA
+^PR7,7
+~SD15
+^JUS
+^LRN
+^CI27
+^PA0,1,1,0
+^XZ
+^XA
 ^MMT
 ^PW1200
 ^LL1800
 ^LS0
-^FO44,51^GB1107,1693,4^FS
-^FO111,892^GB0,847,4^FS
-^FO200,892^GB0,847,4^FS
-^FO268,892^GB0,847,4^FS
-^FO334,895^GB0,847,4^FS
-^FO402,892^GB0,847,4^FS
-^FO465,892^GB0,847,4^FS
-^FO529,56^GFA,57,6732,4,:Z64:eJztwwEJAAAIA7AnMYnBjG+OwwabJKOqWnZVVQufqmrhB7kuzEI=:9C00
-^FO49,890^GFA,77,448,64,:Z64:eJxjYCAOyP/HBB9wqLXHohYbAOmvJ1ItLv0UaCdJ/wMcfsWm9gCRYQoCDSSoxQYAnKXy0Q==:B0CA
-^FO50,1315^GB61,0,4^FS
-^FO201,1310^GFA,69,308,44,:Z64:eJxjYMAJ5P8jA3RZ5v+4AVC6Ho80ulpilRJQ+wDdiSiyf3B7FAQa8EujAACtzKNd:0169
-^BY6,11^FT484,833^B7B,11,2,3,5,N
+^FO68,51^GB1107,1693,4^FS
+^FO135,892^GB0,847,4^FS
+^FO225,892^GB0,847,4^FS
+^FO292,892^GB0,847,4^FS
+^FO358,895^GB0,847,4^FS
+^FO427,892^GB0,847,4^FS
+^FO489,892^GB0,847,4^FS
+^FO554,56^GFA,57,6732,4,:Z64:eJztwwEJAAAIA7AnMYnBjG+OwwabJKOqWnZVVQufqmrhB7kuzEI=:9C00
+^FO74,890^GFA,77,448,64,:Z64:eJxjYCAOyP/HBB9wqLXHohYbAOmvJ1ItLv0UaCdJ/wMcfsWm9gCRYQoCDSSoxQYAnKXy0Q==:B0CA
+^FO72,1315^GFA,29,32,8,:Z64:eJz7/x8M/v3HQQMADfof3Q==:CA3F
+^FO226,1313^GB332,0,4^FS
+^FPH,1^FT118,1711^A0B,38,38^FH\^CI28^FDCARTON NUMBER^FS^CI27
+^FPH,1^FT754,1591^A0B,33,33^FH\^CI28^FD{sn2}^FS^CI27
+^FO763,1290^BY2,2,60^BCB,60,N,N,N,A^FD{sn2}^FS
+^FPH,1^FT915,1587^A0B,33,33^FH\^CI28^FD{sn3}^FS^CI27
+^FO924,1290^BY2,2,60^BCB,60,N,N,N,A^FD{sn3}^FS
+^FPH,1^FT1065,1587^A0B,33,33^FH\^CI28^FD{sn4}^FS^CI27
+^FO1074,1290^BY2,2,60^BCB,60,N,N,N,A^FD{sn4}^FS
+^FPH,1^FT613,1587^A0B,33,33^FH\^CI28^FD{sn1}^FS^CI27
+^FO622,1290^BY2,2,60^BCB,60,N,N,N,A^FD{sn1}^FS
+^FPH,1^FT274,1711^A0B,38,38^FH\^CI28^FDCARTON CONTAINS^FS^CI27
+^FPH,1^FT118,1275^A0B,38,38^FH\^CI28^FD{cartonNumber}^FS^CI27
+^BY3,3,63^FT212,1596^BCB,,N,N,N,A
+^FH\^FD{cartonNumber}^FS
+^FPH,1^FT341,1711^A0B,38,38^FH\^CI28^FDSKU/PV ID:^FS^CI27
+^FPH,1^FT341,1283^A0B,38,38^FH\^CI28^FDDESCRIPTION:^FS^CI27
+^FPH,1^FT474,1283^A0B,38,38^FH\^CI28^FDCONDITION:^FS^CI27
+^FPH,1^FT474,1711^A0B,38,38^FH\^CI28^FDQUANTITY:^FS^CI27
+^FPH,1^FT408,1668^A0B,38,38^FH\^CI28^FD{skuPvId}^FS^CI27
+^FPH,1^FT408,1200^A0B,38,38^FH\^CI28^FD{description}^FS^CI27
+^FPH,1^FT539,1134^A0B,38,38^FH\^CI28^FD{condition}^FS^CI27
+^FPH,1^FT539,1544^A0B,38,38^FH\^CI28^FD{quantity}^FS^CI27
+^BY5,19^FT523,857^B7B,19,2,,,N
 ^FH\^FD{pdf417Data}^FS
-^FPH,1^FT94,1711^A0B,38,38^FH\^CI28^FDCARTON NUMBER^FS^CI27
-^FPH,1^FT250,1711^A0B,38,38^FH\^CI28^FDCARTON CONTAINS^FS^CI27
-^FT94,1271^A0B,38,38^FH\^CI28^FD{cartonNumber}^FS^CI27
-^BY3,3,63^FT188,1562^BCB,,N,N
-^FD{cartonNumber}^FS
-^FPH,1^FT317,1711^A0B,38,38^FH\^CI28^FDSKU/PV ID:^FS^CI27
-^FPH,1^FT317,1283^A0B,38,38^FH\^CI28^FDDESCRIPTION:^FS^CI27
-^FPH,1^FT449,1283^A0B,38,38^FH\^CI28^FDCONDITION:^FS^CI27
-^FPH,1^FT449,1711^A0B,38,38^FH\^CI28^FDQUANTITY:^FS^CI27
-^FPH,1^FT384,1668^A0B,38,38^FH\^CI28^FD{skuPvId}^FS^CI27
-^FPH,1^FT384,1200^A0B,38,38^FH\^CI28^FD{description}^FS^CI27
-^FPH,1^FT514,1134^A0B,38,38^FH\^CI28^FD{condition}^FS^CI27
-^FPH,1^FT514,1544^A0B,38,38^FH\^CI28^FD{quantity}^FS^CI27
-{snSlots}
+^FPH,1^FT754,994^A0B,33,33^FH\^CI28^FD{sn6}^FS^CI27
+^FO763,694^BY2,2,60^BCB,60,N,N,N,A^FD{sn6}^FS
+^FPH,1^FT915,991^A0B,33,33^FH\^CI28^FD{sn7}^FS^CI27
+^FO924,694^BY2,2,60^BCB,60,N,N,N,A^FD{sn7}^FS
+^FPH,1^FT1065,991^A0B,33,33^FH\^CI28^FD{sn8}^FS^CI27
+^FO1074,694^BY2,2,60^BCB,60,N,N,N,A^FD{sn8}^FS
+^FPH,1^FT613,991^A0B,33,33^FH\^CI28^FD{sn5}^FS^CI27
+^FO622,694^BY2,2,60^BCB,60,N,N,N,A^FD{sn5}^FS
+^FPH,1^FT754,449^A0B,33,33^FH\^CI28^FD{sn10}^FS^CI27
+^FO763,148^BY2,2,60^BCB,60,N,N,N,A^FD{sn10}^FS
+^FPH,1^FT613,445^A0B,33,33^FH\^CI28^FD{sn9}^FS^CI27
+^FO622,148^BY2,2,60^BCB,60,N,N,N,A^FD{sn9}^FS
+^PQ1,0,1,Y
 ^XZ
 ";
 
@@ -62,27 +103,6 @@ public static class ZplTemplates
             ["Green"] = ("RM15A-1002NW", "FOLIO GREEN"),
         };
 
-    // Toạ độ gốc (X,Y) của 10 ô SN trên tem Carton Label, theo thứ tự slot 1-10 —
-    // sửa ở đây sau khi test in thực tế, không cần đụng logic build ZPL.
-    public static readonly IReadOnlyList<(int X, int Y)> CartonSnSlots = new List<(int X, int Y)>
-    {
-        (586, 1314), (728, 1314), (875, 1314), (1003, 1314),
-        (586, 731),  (728, 731),  (875, 731),  (1003, 731),
-        (586, 170),  (728, 170),
-    };
-
-    // Kích thước text/barcode cho 10 ô SN — bản đầu (26/2/64) in ra nhỏ hơn nhiều so với
-    // bitmap gốc trong thiết kế ZebraDesigner (~312 dots/ô), nên tăng lên đây. Đây là ước
-    // lượng ban đầu — chỉnh lại các số này sau khi có bản in thật, không cần đụng logic khác.
-    public const int SnTextFontSize = 34;          // ^A0B,<size>,<size>
-    public const int SnBarcodeModuleWidth = 3;      // ^BY<width>,...
-    public const int SnBarcodeHeight = 90;          // ^BY...,,<height>
-    public const int SnTextOffset = 34;             // offset X/Y của field text so với gốc slot
-    public const int SnBarcodeOffset = 50;          // offset X/Y của barcode so với gốc slot (phải > SnTextOffset để không đè lên text)
-
-    // 2 dòng ZPL cho 1 SN slot: field text + Code128 barcode (cùng format ^BCB,,N,N
-    // 4 tham số như barcode CARTON NUMBER gốc — không dùng ^FH\ vì serial không cần hex-escape).
-    public static string BuildCartonSnSlotZpl(int x, int y, string serialNumber) =>
-        $"^FT{x + SnTextOffset},{y + 305}^A0B,{SnTextFontSize},{SnTextFontSize}^FH\\^CI28^FD{serialNumber}^FS^CI27\n" +
-        $"^BY{SnBarcodeModuleWidth},3,{SnBarcodeHeight}^FT{x + SnBarcodeOffset},{y + 305}^BCB,,N,N^FD{serialNumber}^FS";
+    // Số ô Serial Number tối đa trên 1 tem Carton Label ({sn1}..{sn10} trong template).
+    public const int CartonSnPlaceholderCount = 10;
 }
