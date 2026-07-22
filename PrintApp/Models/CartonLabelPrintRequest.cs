@@ -9,3 +9,32 @@ public class CartonLabelPrintRequest
     public string Condition { get; set; } = "";
     public List<string> SerialNumbers { get; set; } = new();
 }
+
+// Trả về từ workorder-lookup — Color/TotalQuantity lấy từ Odoo (giống SnLabel), PrintedQuantity/
+// RemainingQuantity tính từ SM_Sakura_CartonLabel_Data. ExpectedQuantity là số serial cần quét cho
+// CARTON HIỆN TẠI: bằng CartonPcsPerCarton nếu còn đủ hộp, hoặc bằng đúng RemainingQuantity
+// nếu đây là carton lẻ hộp cuối cùng (RemainingQuantity < CartonPcsPerCarton).
+public class CartonWorkOrderLookupResponse
+{
+    public string WorkOrder { get; set; } = "";
+    public string Color { get; set; } = "";
+    public int TotalQuantity { get; set; }
+    public int PrintedQuantity { get; set; }
+    public int RemainingQuantity { get; set; }
+    public int ExpectedQuantity { get; set; }
+    public int TotalCarton { get; set; }
+    public int RemainingCarton { get; set; }
+    public int? ProductId { get; set; }
+}
+
+// Trình duyệt gọi SAU KHI đã gửi ZPL thành công tới bridge cục bộ (in thật, không phải Preview)
+// — lưu các serial không rỗng vào SM_Sakura_CartonLabel_Data. SerialNumbers PHẢI đúng vị trí SN1..SN10
+// trên form (ô trống giữ ""), giống payload gửi cho /api/sakura/cartonsn/print.
+public class CartonReportPrintResultRequest
+{
+    public string WorkOrder { get; set; } = "";
+    public string CartonNumber { get; set; } = "";
+    public string Color { get; set; } = "";
+    public string Condition { get; set; } = "";
+    public List<string> SerialNumbers { get; set; } = new();
+}

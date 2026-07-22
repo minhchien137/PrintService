@@ -129,6 +129,50 @@
     .usb-status.ok  { color: var(--success); }
     .usb-status.bad { color: var(--danger); }
 
+    /* ── Printer Configuration — collapsible header, same pattern as SnLabel.cshtml ──────── */
+    .snl-config-topright { position: absolute; top: 18px; right: 20px; display: flex; align-items: center; gap: 12px; }
+    .snl-config-topright .node-indicator { position: static; top: auto; right: auto; }
+    .snl-collapse-btn {
+        background: var(--white); border: 1.5px solid var(--gray-200); border-radius: 6px; cursor: pointer;
+        width: 22px; height: 22px; padding: 0; margin: 0;
+        color: var(--gray-500); font-size: 12px; line-height: 1;
+        display: flex; align-items: center; justify-content: center;
+        transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+    }
+    .snl-collapse-btn:hover { color: var(--red); border-color: var(--red); background: var(--red-xlight); }
+    .snl-collapse-btn span { display: inline-block; transition: transform 0.2s ease; }
+    .snl-collapse-btn.open span { transform: rotate(180deg); }
+
+    /* Inline "✓ Saved" feedback next to a Save button — fades in/out instead of a toast. */
+    .snl-inline-saved {
+        font-family: var(--font-body); font-size: 0.8rem; font-weight: 600; color: var(--success);
+        opacity: 0; transition: opacity 0.25s ease; pointer-events: none;
+    }
+    .snl-inline-saved.show { opacity: 1; }
+
+    /* "Saved" lit-up state on the Work Order Save button — stays green until Reset is pressed. */
+    .t-btn-ghost.is-saved, .t-btn-ghost.is-saved:hover {
+        background: var(--success); border-color: #047857; color: var(--white);
+    }
+
+    /* Work Order lookup result readout — 1 hàng, chia đều: Color / Quantity (remain/total) /
+       Carton (remain/total). */
+    .snl-readout {
+        display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+        padding: 14px 4px; border-top: 1px dashed var(--gray-200); border-bottom: 1px dashed var(--gray-200);
+    }
+    .snl-readout .stat { display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; min-width: 0; }
+    .snl-readout .stat .k {
+        font-family: var(--font-body); font-size: 0.65rem; font-weight: 700; letter-spacing: 0.4px;
+        text-transform: uppercase; color: var(--gray-500); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+    }
+    .snl-readout .stat .v {
+        font-family: var(--font-head); font-size: 18px; font-weight: 700; color: var(--red-dark); letter-spacing: 0.2px;
+    }
+    @@media (max-width: 480px) {
+        .snl-readout { grid-template-columns: 1fr; }
+    }
+
     .btn-icon {
         flex-shrink: 0; background: var(--white); border: 1.5px solid var(--gray-200); color: var(--gray-500);
         font-family: var(--font-body); font-weight: 600; font-size: 0.8rem; min-height: 46px;
@@ -148,6 +192,7 @@
     }
     .t-field input:hover, .t-field select:hover { border-color: var(--red-mid); }
     .t-field input:focus, .t-field select:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(200,16,46,0.1); }
+    .t-field input.invalid { border-color: var(--danger); }
     .t-field select {
         appearance: none; cursor: pointer;
         background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239CA3AF' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
@@ -261,67 +306,75 @@
 
     <div class="snl-layout">
 
-        <!-- ── Printer Configuration (kept identical to SN Label) ── -->
+        <!-- ── Printer Configuration — collapsible, same pattern as SN Label ── -->
         <div class="snl-right">
-            <div class="t-section" style="position:relative">
+            <div class="t-section" id="printerConfigSection" style="position:relative">
                 <div class="t-section-label" data-i18n="cartonsn.printerConfig">Printer Configuration</div>
 
-                <div class="node-indicator">
-                    <div class="node-dot" id="nodeDot"></div>
-                    <span id="nodeTxt" data-i18n="cartonsn.serviceChecking">Service …</span>
-                </div>
-
-                <!-- Toggle TCP / USB — same component as SN Label / Print page -->
-                <div class="mode-toggle" id="modeToggle" style="margin-bottom:18px">
-                    <label id="lblTcp" class="active">
-                        <input type="radio" name="cartonsn-print-mode" value="tcp" checked />
-                        <span class="mode-icon">🌐</span>
-                        <span>TCP / IP</span>
-                    </label>
-                    <label id="lblUsb">
-                        <input type="radio" name="cartonsn-print-mode" value="usb" />
-                        <span class="mode-icon">🔌</span>
-                        <span>USB</span>
-                    </label>
-                </div>
-
-                <!-- TCP block -->
-                <div id="tcpBlock">
-                    <div class="t-grid t-grid-2 printer-grid">
-                        <div class="t-field">
-                            <label data-i18n="cartonsn.printerIp">Printer IP</label>
-                            <input type="text" id="printerIp" placeholder="192.168.1.100" />
-                        </div>
-                        <div class="t-field">
-                            <label data-i18n="cartonsn.port">Port</label>
-                            <input type="number" id="printerPort" value="9100" />
-                        </div>
+                <div class="snl-config-topright">
+                    <div class="node-indicator">
+                        <div class="node-dot" id="nodeDot"></div>
+                        <span id="nodeTxt" data-i18n="cartonsn.serviceChecking">Service …</span>
                     </div>
-                </div>
-
-                <div class="t-grid t-grid-2" style="margin-top:10px;align-items:start">
-                    <!-- USB block -->
-                    <div id="usbBlock" class="t-field" style="display:none;margin-bottom:0">
-                        <label data-i18n="cartonsn.usbPrinter">USB Printer</label>
-                        <select id="usbSelect" disabled>
-                            <option value="" data-i18n="cartonsn.usbScanHint">— Click 🔄 to scan —</option>
-                        </select>
-                        <div class="usb-status" id="usbStatus"></div>
-                    </div>
-
-                    <div class="t-field">
-                        <label data-i18n="cartonsn.copies">Copies</label>
-                        <input type="number" id="copies" value="1" min="1" max="10" />
-                    </div>
-                </div>
-                <div class="t-actions" style="margin-top:12px">
-                    <button class="t-btn t-btn-ghost" id="btnSavePrinter" data-i18n="cartonsn.save">Save</button>
-                    <button class="btn-icon" id="btnRefreshUsb" type="button" data-i18n-title="cartonsn.refreshUsbTitle" title="Rescan printers">
-                        <span data-i18n="cartonsn.refreshUsb">🔄 Refresh</span>
+                    <button type="button" class="snl-collapse-btn" id="btnTogglePrinterConfig" data-i18n-title="cartonsn.printerConfigToggleTitle" title="Show/hide printer configuration" aria-expanded="false">
+                        <span id="printerConfigChevron">▾</span>
                     </button>
                 </div>
 
-                <div id="printerHint" class="t-status"></div>
+                <div id="printerConfigBody" style="display:none">
+                    <!-- Toggle TCP / USB — same component as SN Label / Print page -->
+                    <div class="mode-toggle" id="modeToggle" style="margin-bottom:18px">
+                        <label id="lblTcp" class="active">
+                            <input type="radio" name="cartonsn-print-mode" value="tcp" checked />
+                            <span class="mode-icon">🌐</span>
+                            <span>TCP / IP</span>
+                        </label>
+                        <label id="lblUsb">
+                            <input type="radio" name="cartonsn-print-mode" value="usb" />
+                            <span class="mode-icon">🔌</span>
+                            <span>USB</span>
+                        </label>
+                    </div>
+
+                    <!-- TCP block -->
+                    <div id="tcpBlock">
+                        <div class="t-grid t-grid-2 printer-grid">
+                            <div class="t-field">
+                                <label data-i18n="cartonsn.printerIp">Printer IP</label>
+                                <input type="text" id="printerIp" placeholder="192.168.1.100" />
+                            </div>
+                            <div class="t-field">
+                                <label data-i18n="cartonsn.port">Port</label>
+                                <input type="number" id="printerPort" value="9100" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="t-grid t-grid-2" style="margin-top:10px;align-items:start">
+                        <!-- USB block -->
+                        <div id="usbBlock" class="t-field" style="display:none;margin-bottom:0">
+                            <label data-i18n="cartonsn.usbPrinter">USB Printer</label>
+                            <select id="usbSelect" disabled>
+                                <option value="" data-i18n="cartonsn.usbScanHint">— Click 🔄 to scan —</option>
+                            </select>
+                            <div class="usb-status" id="usbStatus"></div>
+                        </div>
+
+                        <div class="t-field">
+                            <label data-i18n="cartonsn.copies">Copies</label>
+                            <input type="number" id="copies" value="1" min="1" max="10" />
+                        </div>
+                    </div>
+                    <div class="t-actions" style="margin-top:12px">
+                        <button class="t-btn t-btn-ghost" id="btnSavePrinter" data-i18n="cartonsn.save">Save</button>
+                        <span class="snl-inline-saved" id="printerSavedHint" data-i18n="cartonsn.savedHint">✓ Saved</span>
+                        <button class="btn-icon" id="btnRefreshUsb" type="button" data-i18n-title="cartonsn.refreshUsbTitle" title="Rescan printers">
+                            <span data-i18n="cartonsn.refreshUsb">🔄 Refresh</span>
+                        </button>
+                    </div>
+
+                    <div id="printerHint" class="t-status"></div>
+                </div>
             </div>
         </div>
 
@@ -336,34 +389,35 @@
                         <label data-i18n="cartonsn.workOrder">Work Order</label>
                         <input type="text" id="workOrder" autocomplete="off" data-i18n-placeholder="cartonsn.workOrderPlaceholder" placeholder="Scan or type Work Order…" style="min-height:40px" />
                     </div>
-                    <button type="button" class="t-btn t-btn-primary" id="btnSaveWo" data-i18n="cartonsn.saveWoBtn" style="min-height:40px">💾 Save</button>
+                    <button type="button" class="t-btn t-btn-outline" id="btnLookupWo" data-i18n="cartonsn.lookupBtn" style="min-height:40px">🔍 Lookup</button>
+                    <button type="button" class="t-btn t-btn-ghost" id="btnSaveWo" data-i18n="cartonsn.saveWoBtn" style="min-height:40px">💾 Save</button>
                     <button type="button" class="t-btn t-btn-ghost" id="btnResetWo" data-i18n="cartonsn.resetBtn" style="min-height:40px">↺ Reset</button>
-                    <div id="woStatus" class="t-status t-status-inline"></div>
+                </div>
+                <div id="woStatus" class="t-status"></div>
+
+                <div class="snl-readout" id="woResolved" style="display:none;margin-top:14px;margin-bottom:16px">
+                    <div class="stat">
+                        <span class="k" data-i18n="cartonsn.color">Color</span>
+                        <span class="v" id="woColor">—</span>
+                    </div>
+                    <div class="stat">
+                        <span class="k" data-i18n="cartonsn.woQuantity">Remain Qty / Total Qty</span>
+                        <span class="v" id="woQuantity">—</span>
+                    </div>
+                    <div class="stat">
+                        <span class="k" data-i18n="cartonsn.woCarton">Remain Carton / Total Carton</span>
+                        <span class="v" id="woCarton">—</span>
+                    </div>
                 </div>
 
                 <div class="t-field" style="margin-top:16px">
                     <label data-i18n="cartonsn.cartonNumber">Carton Number</label>
                     <input type="text" id="cartonNumber" autocomplete="off" data-i18n-placeholder="cartonsn.cartonNumberPlaceholder" placeholder="Scan or type Carton Number…" style="min-height:40px" />
+                    <div id="cartonNumberStatus" class="t-status t-status-inline"></div>
                 </div>
 
-                <div class="t-grid t-grid-2" style="margin-top:16px">
-                    <div class="t-field" style="margin-bottom:0">
-                        <label data-i18n="cartonsn.color">Color</label>
-                        <select id="color" style="min-height:40px">
-                            <option value="">— <span data-i18n="cartonsn.selectColor">Select color</span> —</option>
-                            <option value="Blue">Blue — RM15A-1000NW</option>
-                            <option value="Pink">Pink — RM15A-1001NW</option>
-                            <option value="Green">Green — RM15A-1002NW</option>
-                        </select>
-                    </div>
-                    <div class="t-field" style="margin-bottom:0">
-                        <label data-i18n="cartonsn.condition">Condition</label>
-                        <select id="condition" style="min-height:40px">
-                            <option value="New">New</option>
-                            <option value="Refurb">Refurb</option>
-                        </select>
-                    </div>
-                </div>
+                <!-- Condition cố định "New" theo yêu cầu nghiệp vụ hiện tại — ẩn khỏi UI (đổi hằng
+                     số CARTON_FIXED_CONDITION ở JS nếu cần đổi giá trị, sẽ có logic chọn riêng sau). -->
             </div>
 
             <div class="t-section">
@@ -372,17 +426,8 @@
                     <span class="hint" data-i18n="cartonsn.serialHint">— quét barcode hoặc nhập tay</span>
                 </div>
 
-                <div style="display:flex;align-items:flex-end;flex-wrap:wrap;gap:16px;margin-bottom:18px">
-                    <div class="t-field" style="margin-bottom:0">
-                        <label data-i18n="cartonsn.quantityLabel">Số lượng serial / carton</label>
-                        <div style="display:flex;gap:10px;align-items:flex-end">
-                            <input type="number" id="quantity" value="10" min="1" max="10" style="flex:0 0 auto;min-height:40px" />
-                            <button type="button" class="t-btn t-btn-ghost" id="btnApplyQty" data-i18n="cartonsn.applyBtn" style="flex-shrink:0;min-height:40px;padding:8px 14px">
-                                Áp dụng
-                            </button>
-                        </div>
-                    </div>
-                    <div class="count-pill" style="margin-left:auto">
+                <div style="display:flex;align-items:center;flex-wrap:wrap;gap:16px;margin-bottom:18px">
+                    <div class="count-pill">
                         <span data-i18n="cartonsn.scannedLabel">Đã quét:</span> <strong id="scannedCount">0</strong>&nbsp;/&nbsp;<span id="scannedTotal">10</span>
                     </div>
                 </div>
@@ -390,7 +435,10 @@
                 <div id="serialGrid" class="serial-grid"></div>
 
                 <div class="t-actions" style="margin-top:18px">
-                    <button type="button" class="t-btn t-btn-primary" id="btnPrint" data-i18n="cartonsn.printBtn">🖨️ Print Carton Label</button>
+                    <!-- Quét đủ số ô Serial Number là tự động in luôn (xem handleSerialInput) —
+                         ẩn nút Print thủ công, không cần bấm gì thêm. -->
+                    <button type="button" class="t-btn t-btn-primary" id="btnPrint" data-i18n="cartonsn.printBtn" style="display:none">🖨️ Print Carton Label</button>
+                    <button type="button" class="t-btn t-btn-outline" id="btnPreviewZpl" data-i18n="cartonsn.previewZplBtn">📄 Preview ZPL</button>
                 </div>
                 <div id="printStatus" class="t-status"></div>
             </div>
@@ -436,12 +484,31 @@
     // ── Print Label: Work Order / Carton Number ───────────────────────────────
     const $workOrder     = document.getElementById('workOrder');
     const $cartonNumber  = document.getElementById('cartonNumber');
+    const $cartonNumberStatus = document.getElementById('cartonNumberStatus');
+    const $btnLookupWo   = document.getElementById('btnLookupWo');
     const $btnSaveWo     = document.getElementById('btnSaveWo');
     const $btnResetWo    = document.getElementById('btnResetWo');
     const $woStatus      = document.getElementById('woStatus');
+    const $woResolved    = document.getElementById('woResolved');
+    const $woColor       = document.getElementById('woColor');
+    const $woQuantity    = document.getElementById('woQuantity');
+    const $woCarton      = document.getElementById('woCarton');
+
+    // Condition tạm cố định "New" — bỏ dropdown theo yêu cầu, sẽ có logic chọn riêng sau.
+    const CARTON_FIXED_CONDITION = 'New';
 
     const LS_WO = 'sakura_cartonsn_workorder';
     const LS_CARTON = 'sakura_cartonsn_cartonnumber';
+
+    // Trạng thái Work Order đã lookup — resolvedColor lấy tự động từ Odoo (không còn dropdown
+    // Color để người dùng tự chọn), expectedQuantityThisCarton là số serial cần quét cho CARTON
+    // HIỆN TẠI (đủ hộp = CartonPcsPerCarton, hoặc lẻ hộp = đúng phần dư còn lại của WO).
+    let woResolvedOk = false;
+    let resolvedColor = null;
+    let woTotalQuantity = null;
+    let woRemainingQuantity = null;
+    let expectedQuantityThisCarton = null;
+    let woStatusHideTimer = null;
 
     function loadWoFields() {
         const wo = localStorage.getItem(LS_WO);
@@ -450,41 +517,170 @@
         if (carton) $cartonNumber.value = carton;
     }
 
+    function resetWoState() {
+        woResolvedOk = false;
+        resolvedColor = null;
+        woTotalQuantity = null;
+        woRemainingQuantity = null;
+        expectedQuantityThisCarton = null;
+        $woResolved.style.display = 'none';
+
+        // Chưa có Work Order hợp lệ (WO đã in hết, chưa lookup, hoặc đang gõ WO khác) -> không
+        // cho nhập Carton Number/Serial Number, tránh quét nhầm vào 1 WO không rõ ràng. Chỉ mở
+        // lại khi lookupWorkOrder() trả về thành công (xem cuối lookupWorkOrder()).
+        $cartonNumber.value = '';
+        $cartonNumber.disabled = true;
+        $cartonNumber.classList.remove('invalid');
+        hideStatus($cartonNumberStatus);
+        $serialGrid.innerHTML = '';
+        $scannedTotal.textContent = '0';
+        $scannedCount.textContent = '0';
+        serialList = [];
+    }
+
+    async function lookupWorkOrder() {
+        const wo = $workOrder.value.trim();
+        resetWoState();
+
+        // WO đã đổi so với lần Save gần nhất -> đèn "đã save" không còn đúng nữa.
+        if (wo !== localStorage.getItem(LS_WO)) {
+            $btnSaveWo.classList.remove('is-saved');
+        }
+
+        clearTimeout(woStatusHideTimer);
+
+        if (!wo) {
+            showStatus($woStatus, `✗ ${t('cartonsn.woEnterFirst', 'Enter a Work Order first.')}`, 'err');
+            return;
+        }
+
+        showStatus($woStatus, `⏳ ${t('cartonsn.woLookingUp', 'Looking up…')}`, 'ok');
+        try {
+            const res = await fetch(`${BASE}/api/sakura/cartonsn/workorder-lookup?workOrder=${encodeURIComponent(wo)}`);
+            const body = await res.json();
+            if (!res.ok || !body.ok) throw new Error(window.SakuraI18n.translateApiError(body, t('cartonsn.lookupFailed', 'Lookup failed.')));
+
+            resolvedColor = body.data.color;
+            woTotalQuantity = body.data.totalQuantity;
+            woRemainingQuantity = body.data.remainingQuantity;
+            expectedQuantityThisCarton = body.data.expectedQuantity;
+
+            $woColor.textContent = resolvedColor;
+            $woQuantity.textContent = `${woRemainingQuantity}/${woTotalQuantity}`;
+            $woCarton.textContent = `${body.data.remainingCarton}/${body.data.totalCarton}`;
+            $woResolved.style.display = 'grid';
+            woResolvedOk = true;
+
+            // WO hợp lệ + còn hàng -> mở lại Carton Number/Serial Number cho quét (resetWoState()
+            // ở đầu hàm đã khóa lại từ trước). Tự áp dụng số lượng serial cần quét cho carton
+            // hiện tại (đủ hộp hoặc lẻ hộp).
+            $cartonNumber.disabled = false;
+            buildSerialGrid(expectedQuantityThisCarton);
+
+            const lookupMsg = t('cartonsn.woLookupSuccess', '{color} — this carton needs {qty} serial(s).')
+                .replace('{color}', resolvedColor).replace('{qty}', expectedQuantityThisCarton);
+            showStatus($woStatus, `✓ ${lookupMsg}`, 'ok');
+            woStatusHideTimer = setTimeout(() => { $woStatus.className = 't-status'; }, 5000);
+            $cartonNumber.focus();
+        } catch (e) {
+            // Lookup fail (vd WO đã in đủ số lượng) -> Carton Number/Serial Number vẫn đang khóa
+            // (resetWoState() ở đầu hàm) — chỉ hiện thông báo + gợi ý đổi WO, KHÔNG tự làm gì
+            // thêm, để người vận hành tự nhận ra và đổi Work Order khác rồi Lookup lại.
+            showStatus($woStatus, `✗ ${e.message} ${t('cartonsn.pleaseChangeWo', 'Please change the Work Order and look up again.')}`, 'err');
+        }
+    }
+
+    $btnLookupWo.addEventListener('click', lookupWorkOrder);
+    $workOrder.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); lookupWorkOrder(); }
+    });
+    $workOrder.addEventListener('input', () => {
+        if ($workOrder.value.trim() !== localStorage.getItem(LS_WO)) {
+            $btnSaveWo.classList.remove('is-saved');
+        }
+        if (woResolvedOk) resetWoState();
+    });
+
+    // ── Save / Reset Work Order — Save ghi WO+Carton Number hiện tại vào localStorage để
+    // lần sau mở trang tự điền; Reset xóa ô nhập và mọi state đã resolve. ─────────────────
     $btnSaveWo.addEventListener('click', () => {
-        localStorage.setItem(LS_WO, $workOrder.value.trim());
+        const wo = $workOrder.value.trim();
+        if (!wo) {
+            showStatus($woStatus, `✗ ${t('cartonsn.woEnterFirst', 'Enter a Work Order first.')}`, 'err');
+            return;
+        }
+        localStorage.setItem(LS_WO, wo);
         localStorage.setItem(LS_CARTON, $cartonNumber.value.trim());
-        showStatus($woStatus, t('cartonsn.savedMsg', '✓ Saved.'), 'ok');
+        showStatus($woStatus, `✓ ${t('cartonsn.savedMsg', '✓ Saved.')}`, 'ok');
+        clearTimeout(woStatusHideTimer);
+        woStatusHideTimer = setTimeout(() => { $woStatus.className = 't-status'; }, 5000);
+        $btnSaveWo.classList.add('is-saved');
     });
 
     $btnResetWo.addEventListener('click', () => {
+        clearTimeout(woStatusHideTimer);
         $workOrder.value = '';
-        $cartonNumber.value = '';
+        resetWoState(); // xóa Carton Number + khóa lại, xóa toàn bộ ô Serial Number
         localStorage.removeItem(LS_WO);
         localStorage.removeItem(LS_CARTON);
-        hideStatus($woStatus);
+        $woStatus.className = 't-status';
+        $btnSaveWo.classList.remove('is-saved');
         $workOrder.focus();
     });
 
-    $workOrder.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') { e.preventDefault(); $cartonNumber.focus(); }
+    // Carton Number không được trùng — mỗi carton là 1 định danh vật lý riêng, đã in rồi thì
+    // không cho nhập lại. Check ngay khi bấm Enter (trước khi nhảy focus sang ô SN đầu tiên),
+    // trùng thì báo lỗi + reset ô + focus lại để nhập cái khác (build-zpl vẫn re-check lại lần
+    // nữa phòng trường hợp bỏ qua bước này — xem BuildCartonLabelZplAsync).
+    async function verifyCartonNumber() {
+        const value = $cartonNumber.value.trim();
+        $cartonNumber.classList.remove('invalid');
+        hideStatus($cartonNumberStatus);
+        if (!value) return false;
+
+        $cartonNumber.disabled = true;
+        try {
+            const res = await fetch(`${BASE}/api/sakura/cartonsn/verify-carton-number?cartonNumber=${encodeURIComponent(value)}`);
+            const body = await res.json();
+            if (!res.ok || !body.ok) {
+                $cartonNumber.classList.add('invalid');
+                showStatus($cartonNumberStatus, `✗ ${window.SakuraI18n.translateApiError(body, t('cartonsn.cartonNumberAlreadyUsed', 'This Carton Number has already been used.'))}`, 'err');
+                $cartonNumber.value = '';
+                return false;
+            }
+            return true;
+        } catch (e) {
+            showStatus($cartonNumberStatus, `✗ ${t('cartonsn.cartonNumberCheckNetworkError', 'Could not verify Carton Number — check the network and try again.')}`, 'err');
+            return false;
+        } finally {
+            $cartonNumber.disabled = false;
+            $cartonNumber.focus();
+        }
+    }
+
+    $cartonNumber.addEventListener('keydown', async (e) => {
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        const ok = await verifyCartonNumber();
+        if (ok) document.querySelector('#serialGrid input')?.focus();
     });
-    $cartonNumber.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') { e.preventDefault(); document.querySelector('#serialGrid input')?.focus(); }
+    $cartonNumber.addEventListener('input', () => {
+        $cartonNumber.classList.remove('invalid');
+        hideStatus($cartonNumberStatus);
     });
 
     // ── Serial numbers grid — quét barcode hoặc nhập tay (same pattern as /toast) ──
-    const $quantity     = document.getElementById('quantity');
-    const $btnApplyQty  = document.getElementById('btnApplyQty');
+    // Số lượng serial/carton không còn ô nhập tay + nút Apply — tự tính từ Work Order lookup
+    // (expectedQuantityThisCarton), mặc định MAX_SN_PER_CARTON khi chưa lookup.
     const $serialGrid   = document.getElementById('serialGrid');
     const $scannedCount = document.getElementById('scannedCount');
     const $scannedTotal = document.getElementById('scannedTotal');
 
     let serialList = [];
 
-    function buildSerialGrid() {
-        let qty = parseInt($quantity.value) || MAX_SN_PER_CARTON;
+    function buildSerialGrid(qty) {
+        qty = parseInt(qty) || MAX_SN_PER_CARTON;
         qty = Math.min(Math.max(qty, 1), MAX_SN_PER_CARTON);
-        $quantity.value = qty;
 
         serialList = [];
         $serialGrid.innerHTML = '';
@@ -514,23 +710,13 @@
             });
         });
         inputs[0]?.focus();
-        syncQuantityWidth();
     }
 
-    // Cho ô "Số lượng serial / carton" rộng bằng đúng ô SN1 bên dưới — đo trực tiếp
-    // trên DOM vì 2 ô nằm trong 2 kiểu layout khác nhau (grid 3 cột vs flex row),
-    // không thể suy ra bằng % hay calc() thuần CSS.
-    function syncQuantityWidth() {
-        const firstSn = $serialGrid.querySelector('input');
-        if (firstSn) $quantity.style.width = firstSn.getBoundingClientRect().width + 'px';
-    }
-    let resizeTimer;
-    window.addEventListener('resize', () => {
-        clearTimeout(resizeTimer);
-        resizeTimer = setTimeout(syncQuantityWidth, 150);
-    });
-
-    function handleSerialInput(inp, idx, inputs) {
+    // 3 điều kiện check khi quét 1 SN vào carton (tránh in nhầm): (1) định dạng Serial Number,
+    // (2) trùng với serial khác đã quét TRONG LẦN NÀY (client tự check bằng string/array —
+    // serialList), (3) đã được quét/in ở carton khác chưa (phải tra DB, gọi server). (1) và (3)
+    // cùng đi qua 1 API duy nhất (verify-serial) vì (3) cần DB, gọi 1 lần cho gọn.
+    async function handleSerialInput(inp, idx, inputs) {
         const val = inp.value.trim();
         const badge = document.getElementById(`badge_${idx}`);
 
@@ -543,10 +729,33 @@
             return;
         }
 
+        // Check (2): trùng trong lần quét hiện tại — không cần gọi server.
         if (serialList.includes(val) && inp.dataset.oldVal !== val) {
-            markInvalid(inp, badge, t('cartonsn.duplicateSerial', 'Duplicate serial'));
+            markInvalid(inp, badge, t('cartonsn.duplicateSerialShort', 'Duplicate'));
+            showStatus($printStatus, `✗ ${t('cartonsn.duplicateSerial', 'Duplicate serial')}: ${val}`, 'err');
             inp.value = '';
             return;
+        }
+
+        // Check (1) + (3): định dạng + đã quét/in ở carton khác chưa.
+        inp.disabled = true;
+        try {
+            const res = await fetch(`${BASE}/api/sakura/cartonsn/verify-serial?serial=${encodeURIComponent(val)}`);
+            const verify = await res.json();
+            if (!res.ok || !verify.ok) {
+                const shortLabel = verify.errorCode === 'cartonLabel.serialAlreadyUsed'
+                    ? t('cartonsn.serialAlreadyUsedShort', 'Already used')
+                    : t('cartonsn.invalidFormatShort', 'Invalid format');
+                markInvalid(inp, badge, shortLabel);
+                showStatus($printStatus, `✗ ${window.SakuraI18n.translateApiError(verify, t('cartonsn.serialCheckFailed', 'Serial check failed.'))}`, 'err');
+                return;
+            }
+        } catch (e) {
+            markInvalid(inp, badge, t('cartonsn.networkErrorShort', 'Network error'));
+            showStatus($printStatus, `✗ ${t('cartonsn.serialCheckNetworkError', 'Could not verify this serial — check the network and try again.')}`, 'err');
+            return;
+        } finally {
+            inp.disabled = false;
         }
 
         if (inp.dataset.oldVal) serialList = serialList.filter(s => s !== inp.dataset.oldVal);
@@ -558,8 +767,9 @@
         if (idx < inputs.length - 1) {
             inputs[idx + 1].focus();
         } else if (serialList.length === inputs.length) {
-            // Quét đủ số lượng đã đặt (mặc định 10/10) → tự động in ngay, không cần bấm nút.
-            doPrint();
+            // Quét đủ số lượng đã đặt → nút Print thật đang tạm ẩn (CARTON_REAL_PRINT_ENABLED),
+            // nên tự động Preview ZPL để xem ngay, không cần bấm nút.
+            if (CARTON_REAL_PRINT_ENABLED) doPrint(); else previewZpl();
         }
     }
 
@@ -575,12 +785,11 @@
         setTimeout(() => { inp.value = ''; inp.className = ''; badge.className = 'serial-badge'; }, 1400);
     }
 
-    $btnApplyQty.addEventListener('click', buildSerialGrid);
-
     // ── Print Carton Label — build ZPL server-side, send to Local Bridge ──────
-    const $color     = document.getElementById('color');
-    const $condition = document.getElementById('condition');
+    const CARTON_REAL_PRINT_ENABLED = true;
+
     const $btnPrint  = document.getElementById('btnPrint');
+    const $btnPreviewZpl = document.getElementById('btnPreviewZpl');
     const $printStatus = document.getElementById('printStatus');
 
     function isPrinterConfigured() {
@@ -626,29 +835,108 @@
         URL.revokeObjectURL(url);
     }
 
-    let printing = false;
+    // Mảng gửi lên server phải đúng VỊ TRÍ ô SN1..SN10 trên form (khớp {sn1}..{sn10} trong
+    // template) — không dùng serialList (chỉ để đếm/check trùng), vì serialList xếp theo thứ
+    // tự gõ/sửa xong ô nào trước, không phải theo đúng ô. Đọc trực tiếp .value của từng input
+    // theo đúng thứ tự DOM, ô nào đang trống thì giữ nguyên chuỗi rỗng ở đúng vị trí đó.
+    function getOrderedSerials() {
+        return Array.from($serialGrid.querySelectorAll('input')).map(inp => inp.value.trim());
+    }
 
-    async function doPrint() {
-        if (printing) return;
-
+    // Đọc + validate Work Order/Carton Number trước khi gọi API build ZPL — dùng chung cho cả
+    // Print lẫn Preview ZPL (Preview không cần bridge/máy in, chỉ cần build+xem ZPL). Color giờ
+    // lấy tự động từ Work Order lookup (resolvedColor), Condition tạm cố định "New".
+    function readCartonFormOrNull() {
         const cartonNumber = $cartonNumber.value.trim();
-        const color = $color.value;
-        const condition = $condition.value;
 
+        if (!woResolvedOk || !resolvedColor) {
+            showStatus($printStatus, `✗ ${t('cartonsn.woLookupRequired', 'Look up a Work Order first.')}`, 'err');
+            $workOrder.focus();
+            return null;
+        }
         if (!cartonNumber) {
             showStatus($printStatus, `✗ ${t('cartonsn.cartonNumberRequired', 'Enter a Carton Number first.')}`, 'err');
             $cartonNumber.focus();
-            return;
-        }
-        if (!color) {
-            showStatus($printStatus, `✗ ${t('cartonsn.colorRequired', 'Select a color first.')}`, 'err');
-            $color.focus();
-            return;
+            return null;
         }
         if (serialList.length === 0) {
             showStatus($printStatus, `✗ ${t('cartonsn.noSerials', 'Scan at least 1 serial number first.')}`, 'err');
-            return;
+            return null;
         }
+        return { workOrder: $workOrder.value.trim(), cartonNumber, color: resolvedColor, condition: CARTON_FIXED_CONDITION };
+    }
+
+    // Xem/tải ZPL sau khi đã thay biến — gọi thẳng server build ZPL, KHÔNG cần Local Bridge
+    // hay máy in kết nối (vd đang test ở nhà, không có mạng tới máy in) — chỉ để kiểm tra
+    // nội dung ZPL cuối cùng trước khi in thật.
+    async function previewZpl() {
+        const form = readCartonFormOrNull();
+        if (!form) return;
+
+        $btnPreviewZpl.disabled = true;
+        try {
+            const res = await fetch(`${BASE}/api/sakura/cartonsn/print`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...form, serialNumbers: getOrderedSerials() })
+            });
+            const body = await res.json();
+            if (!res.ok || !body.ok) throw new Error(window.SakuraI18n.translateApiError(body, t('cartonsn.printFailed', 'Print failed.')));
+
+            downloadZplFile(body.zpl, `carton-${form.cartonNumber}-preview.zpl`);
+
+            // Theo yêu cầu hiện tại (đang giai đoạn test, chưa in tem thật) — Preview ZPL cũng
+            // tính là đã "in xong": lưu DB + reset Carton Number/Serial Number, y hệt luồng in
+            // thật (doPrint). Nút Print thật đang ẩn nên đây là cách duy nhất để test hết luồng.
+            const reportOk = await finishSuccessfulPrint(form);
+            const reportWarning = reportOk ? '' : ` ⚠ ${t('cartonsn.reportResultFailed', 'Could not save the scan record to the server.')}`;
+            showStatus($printStatus, `✓ ${t('cartonsn.zplPreviewReady', 'ZPL preview downloaded — no printer needed to check it.')}${reportWarning}`, reportOk ? 'ok' : 'err');
+        } catch (e) {
+            showStatus($printStatus, `✗ ${e.message}`, 'err');
+        } finally {
+            $btnPreviewZpl.disabled = false;
+        }
+    }
+
+    $btnPreviewZpl.addEventListener('click', previewZpl);
+
+    // Lưu các serial không rỗng vào DB (SM_Sakura_CartonLabel_Data) — CHỈ gọi sau khi ZPL coi
+    // như đã "in xong" (bridge thành công, hoặc Preview theo yêu cầu test hiện tại).
+    async function reportCartonPrintResult(form, orderedSerials) {
+        try {
+            const res = await fetch(`${BASE}/api/sakura/cartonsn/report-print-result`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...form, serialNumbers: orderedSerials })
+            });
+            const body = await res.json().catch(() => null);
+            return !!(res.ok && body && body.ok);
+        } catch (e) {
+            return false;
+        }
+    }
+
+    // Sau khi 1 tem coi như đã "in xong" -> lưu DB, rồi LOOKUP LẠI WO (không tin số cộng dồn cục
+    // bộ — có thể trạm khác cũng đang in cùng WO này) để lấy đúng Qty Print/Remain thật từ
+    // server. lookupWorkOrder() tự lo xóa/khóa Carton Number + Serial Number rồi mở lại + build
+    // đúng số ô cho carton kế tiếp nếu WO còn hàng (xem resetWoState()) — nếu WO đã hết thì giữ
+    // nguyên khóa + hiện thông báo, không cần code gì thêm ở đây. Dùng chung cho cả doPrint (in
+    // thật) lẫn previewZpl (đang test, xem mục đích ở previewZpl()).
+    async function finishSuccessfulPrint(form) {
+        const reportOk = await reportCartonPrintResult(form, getOrderedSerials());
+        await lookupWorkOrder();
+        return reportOk;
+    }
+
+    let printing = false;
+
+    async function doPrint() {
+        if (printing || !CARTON_REAL_PRINT_ENABLED) return;
+
+        const form = readCartonFormOrNull();
+        if (!form) return;
+        const { cartonNumber, color, condition } = form;
+
         if (!bridgeOnline || !isPrinterConfigured()) {
             showStatus($printStatus, `✗ ${printerNotReadyMessage()}`, 'err');
             return;
@@ -660,7 +948,7 @@
             const res = await fetch(`${BASE}/api/sakura/cartonsn/print`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ cartonNumber, color, condition, serialNumbers: serialList })
+                body: JSON.stringify({ cartonNumber, color, condition, serialNumbers: getOrderedSerials() })
             });
             const body = await res.json();
             if (!res.ok || !body.ok) throw new Error(window.SakuraI18n.translateApiError(body, t('cartonsn.printFailed', 'Print failed.')));
@@ -669,6 +957,7 @@
             const copies = parseInt($copies.value) || 1;
             let msg = `✓ ${t('cartonsn.generatedLabelMsg', 'Carton label generated ({n} serial(s)).').replace('{n}', serialList.length)}`;
             let statusType = 'ok';
+            let sentOk = false;
 
             if (printMode === 'usb') {
                 const printerName = $usbSelect.value;
@@ -676,6 +965,7 @@
                     try {
                         for (let i = 0; i < copies; i++) await sendToBridgeUsb(zpl, printerName);
                         msg += t('cartonsn.sentToUsbPrinter', ' Sent to USB printer "{name}" (Local Bridge).').replace('{name}', printerName);
+                        sentOk = true;
                     } catch (e) {
                         statusType = 'err';
                         msg += t('cartonsn.sendToPrinterFailed', ' ✗ Failed to send to printer: {error}').replace('{error}', e.message);
@@ -691,6 +981,7 @@
                     try {
                         for (let i = 0; i < copies; i++) await sendToBridge(zpl, printerIp, printerPort);
                         msg += t('cartonsn.sentToTcpPrinter', ' Sent to {ip}:{port} (Local Bridge).').replace('{ip}', printerIp).replace('{port}', printerPort);
+                        sentOk = true;
                     } catch (e) {
                         statusType = 'err';
                         msg += t('cartonsn.sendToPrinterFailed', ' ✗ Failed to send to printer: {error}').replace('{error}', e.message);
@@ -699,6 +990,13 @@
                     downloadZplFile(zpl, `carton-${cartonNumber}.zpl`);
                     msg += t('cartonsn.noIpSet', ' No printer IP set — downloaded .zpl file instead.');
                 }
+            }
+
+            // Chỉ ghi DB khi ZPL thật sự đã gửi tới máy in thành công — tải file .zpl (nhánh
+            // "không có IP/USB") không tính là đã in, không được trừ vào số lượng Work Order.
+            if (sentOk) {
+                const reportOk = await finishSuccessfulPrint(form);
+                if (!reportOk) msg += ` ⚠ ${t('cartonsn.reportResultFailed', 'Could not save the scan record to the server.')}`;
             }
             showStatus($printStatus, msg, statusType);
         } catch (e) {
@@ -711,11 +1009,24 @@
 
     $btnPrint.addEventListener('click', doPrint);
 
+    // ── Printer Configuration — collapsed by default, same pattern as SN Label ────────────
+    const $printerConfigBody = document.getElementById('printerConfigBody');
+    const $btnTogglePrinterConfig = document.getElementById('btnTogglePrinterConfig');
+    let printerConfigOpen = false;
+    function setPrinterConfigOpen(open) {
+        printerConfigOpen = open;
+        $printerConfigBody.style.display = open ? '' : 'none';
+        $btnTogglePrinterConfig.classList.toggle('open', open);
+        $btnTogglePrinterConfig.setAttribute('aria-expanded', String(open));
+    }
+    $btnTogglePrinterConfig.addEventListener('click', () => setPrinterConfigOpen(!printerConfigOpen));
+
     // ── Printer config — same pattern as SN Label / Toast pages ───────────────
     const $printerIp   = document.getElementById('printerIp');
     const $printerPort = document.getElementById('printerPort');
     const $copies      = document.getElementById('copies');
     const $btnSavePrinter = document.getElementById('btnSavePrinter');
+    const $printerSavedHint = document.getElementById('printerSavedHint');
     const $printerHint = document.getElementById('printerHint');
 
     const $nodeDot = document.getElementById('nodeDot');
@@ -735,7 +1046,9 @@
         ip: 'sakura_cartonsn_ip',
         port: 'sakura_cartonsn_port',
         copies: 'sakura_cartonsn_copies',
-        mode: 'sakura_cartonsn_print_mode'
+        mode: 'sakura_cartonsn_print_mode',
+        usbName: 'sakura_cartonsn_usb_name',
+        saved: 'sakura_cartonsn_printer_saved'
     };
 
     function loadPrinterConfig() {
@@ -744,13 +1057,22 @@
         if (v(LS.port)) $printerPort.value = v(LS.port);
         if (v(LS.copies)) $copies.value = v(LS.copies);
         setPrintMode(v(LS.mode) === 'usb' ? 'usb' : 'tcp');
+
+        // Đã từng Save trước khi F5 -> hiện lại đèn "✓ Saved" ngay (không chờ bấm lại Save).
+        if (v(LS.saved) === '1') {
+            $printerSavedHint.classList.add('show');
+        }
     }
 
     $btnSavePrinter.addEventListener('click', () => {
         localStorage.setItem(LS.ip, $printerIp.value.trim());
         localStorage.setItem(LS.port, $printerPort.value.trim());
         localStorage.setItem(LS.copies, $copies.value.trim());
-        showStatus($printerHint, t('cartonsn.printerConfigSaved', '✓ Printer configuration saved.'), 'ok');
+        localStorage.setItem(LS.usbName, $usbSelect.value || '');
+        localStorage.setItem(LS.saved, '1');
+
+        // Giữ nguyên "✓ Saved" cho tới khi refresh trang — không tự ẩn.
+        $printerSavedHint.classList.add('show');
     });
 
     function setPrintMode(mode) {
@@ -788,6 +1110,12 @@
             $usbSelect.disabled = false;
             $usbStatus.textContent = t('cartonsn.usbFoundCount', '✓ Found {n} printer(s).').replace('{n}', data.printers.length);
             $usbStatus.className = 'usb-status ok';
+
+            // Tự chọn lại máy in USB đã Save trước đó, nếu vẫn có trong danh sách quét được.
+            const savedUsbName = localStorage.getItem(LS.usbName);
+            if (savedUsbName && data.printers.includes(savedUsbName)) {
+                $usbSelect.value = savedUsbName;
+            }
         } catch (err) {
             $usbSelect.innerHTML = `<option value="">${t('cartonsn.usbLoadError', '— Load error —')}</option>`;
             $usbStatus.textContent = t('cartonsn.usbCannotConnect', 'Cannot connect to localhost:8021.');
@@ -795,7 +1123,10 @@
         }
     }
 
-    $btnRefreshUsb.addEventListener('click', loadUsbPrinters);
+    $btnRefreshUsb.addEventListener('click', () => {
+        $printerSavedHint.classList.remove('show');
+        loadUsbPrinters();
+    });
 
     async function checkNode() {
         try {
@@ -826,10 +1157,19 @@
     });
 
     // ── init ──────────────────────────────────────────────────────────────────
+    setPrinterConfigOpen(false);
     loadWoFields();
     loadPrinterConfig();
-    buildSerialGrid();
-    $workOrder.focus();
+    // Chưa lookup WO nào -> Carton Number/Serial Number khóa sẵn (xem resetWoState()).
+    resetWoState();
+
+    // Khôi phục WO đã Save lần trước (nếu có) và tự lookup lại luôn (giống SN Label).
+    if (localStorage.getItem(LS_WO)) {
+        $btnSaveWo.classList.add('is-saved');
+        lookupWorkOrder();
+    } else {
+        $workOrder.focus();
+    }
 })();
 </script>
 }

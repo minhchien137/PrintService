@@ -739,6 +739,105 @@ public class SakuraController : Controller
         return File(bytes, "text/plain", $"sn-labels-{batchId}.zpl");
     }
 
+    // ── API: Carton SN Label — Work Order lookup (lấy Color + Total Quantity từ Odoo, giống
+    // SnLabel — tính thêm Printed/Remaining từ SM_Sakura_CartonLabel_Data + ExpectedQuantity cho
+    // carton hiện tại: đủ hộp (CartonPcsPerCarton) hay lẻ hộp (phần dư còn lại)). ─────────────
+
+    [HttpGet("/api/sakura/cartonsn/workorder-lookup")]
+    public async Task<IActionResult> CartonWorkOrderLookup([FromQuery] string workOrder)
+    {
+        if (string.IsNullOrWhiteSpace(workOrder))
+            return BadRequest(new { ok = false, error = "Thiếu Work Order.", errorCode = "workOrder.missing" });
+
+        string wo = workOrder.Trim();
+        try
+        {
+            var result = await _viidoo.SearchAsync(wo);
+            if (result == null)
+                return BadRequest(new { ok = false, error = $"Không tìm thấy Work Order '{wo}' trên Odoo.", errorCode = "workOrder.notFoundOdoo", errorParams = new { wo } });
+
+            if (string.IsNullOrWhiteSpace(result.Color))
+                return BadRequest(new { ok = false, error = $"Không xác định được màu cho Work Order '{wo}'.", errorCode = "workOrder.colorUnknown", errorParams = new { wo } });
+
+            if (result.Quantity is not decimal qty || qty < 1)
+                return BadRequest(new { ok = false, error = $"Work Order '{wo}' không có số lượng hợp lệ.", errorCode = "workOrder.invalidQuantity", errorParams = new { wo } });
+
+            string? variant = SakuraService.TryResolveVariantFromColor(result.Color);
+            if (variant == null)
+                return BadRequest(new { ok = false, error = $"Không nhận diện được màu '{result.Color}' trả về từ Odoo.", errorCode = "workOrder.unresolvedColor", errorParams = new { color = result.Color } });
+
+            string color = SakuraService.ResolveColor(variant);
+            if (!ZplTemplates.CartonColorMeta.ContainsKey(color))
+                return BadRequest(new { ok = false, error = $"Màu '{color}' chưa có cấu hình Carton Label.", errorCode = "cartonLabel.unknownColor", errorParams = new { color } });
+
+            int totalQuantity = (int)qty;
+            int printedQuantity = await _snLabel.GetCartonWorkOrderPrintedCountAsync(wo);
+            int remainingQuantity = Math.Max(0, totalQuantity - printedQuantity);
+
+            if (remainingQuantity <= 0)
+                return BadRequest(new { ok = false, error = $"Work Order '{wo}' đã in đủ số lượng ({printedQuantity}/{totalQuantity}).", errorCode = "workOrder.exhausted", errorParams = new { wo, printed = printedQuantity, total = totalQuantity } });
+
+            int expectedQuantity = Math.Min(remainingQuantity, SakuraService.CartonPcsPerCarton);
+            int totalCarton = (int)Math.Ceiling(totalQuantity / (double)SakuraService.CartonPcsPerCarton);
+            int remainingCarton = (int)Math.Ceiling(remainingQuantity / (double)SakuraService.CartonPcsPerCarton);
+
+            var response = new CartonWorkOrderLookupResponse
+            {
+                WorkOrder = wo,
+                Color = color,
+                TotalQuantity = totalQuantity,
+                PrintedQuantity = printedQuantity,
+                RemainingQuantity = remainingQuantity,
+                ExpectedQuantity = expectedQuantity,
+                TotalCarton = totalCarton,
+                RemainingCarton = remainingCarton,
+                ProductId = result.ProductId
+            };
+            return Ok(new { ok = true, data = response });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(BuildError(ex));
+        }
+    }
+
+    // ── API: Carton SN Label — verify 1 serial NGAY lúc quét vào 1 ô SN (định dạng + đã
+    // quét/in ở carton khác chưa) — check trùng trong lần quét hiện tại do client tự làm bằng
+    // string/array, không cần gọi server. ───────────────────────────────────────────────────
+
+    [HttpGet("/api/sakura/cartonsn/verify-serial")]
+    public async Task<IActionResult> CartonVerifySerial([FromQuery] string serial)
+    {
+        if (string.IsNullOrWhiteSpace(serial))
+            return BadRequest(new { ok = false, error = "Thiếu Serial Number.", errorCode = "serial.missing" });
+
+        var (ok, errorCode, message) = await _snLabel.ValidateCartonSerialAsync(serial.Trim());
+        if (!ok)
+        {
+            var body = new { ok = false, error = message, errorCode };
+            return errorCode == "cartonLabel.serialAlreadyUsed" ? Conflict(body) : BadRequest(body);
+        }
+
+        return Ok(new { ok = true });
+    }
+
+    // ── API: Carton SN Label — verify Carton Number NGAY lúc nhập/quét (chặn nhập trùng — mỗi
+    // carton là 1 định danh vật lý riêng, đã in rồi thì không cho dùng lại). ───────────────────
+
+    [HttpGet("/api/sakura/cartonsn/verify-carton-number")]
+    public async Task<IActionResult> CartonVerifyCartonNumber([FromQuery] string cartonNumber)
+    {
+        if (string.IsNullOrWhiteSpace(cartonNumber))
+            return BadRequest(new { ok = false, error = "Thiếu Carton Number.", errorCode = "cartonLabel.cartonNumberMissing" });
+
+        string trimmed = cartonNumber.Trim();
+        bool alreadyUsed = await _snLabel.IsCartonNumberAlreadyUsedAsync(trimmed);
+        if (alreadyUsed)
+            return Conflict(new { ok = false, error = $"Carton Number '{trimmed}' đã được sử dụng trước đó.", errorCode = "cartonLabel.cartonNumberAlreadyUsed", errorParams = new { cartonNumber = trimmed } });
+
+        return Ok(new { ok = true });
+    }
+
     // ── API: Carton SN Label print ───────────────────────────────────────────
 
     [HttpPost("/api/sakura/cartonsn/print")]
@@ -756,6 +855,37 @@ public class SakuraController : Controller
         {
             return BadRequest(BuildError(ex));
         }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(BuildError(ex));
+        }
+    }
+
+    // ── API: Carton SN Label — báo đã in thành công (SAU KHI trình duyệt gửi ZPL tới bridge
+    // cục bộ) — lưu các serial không rỗng vào SM_Sakura_CartonLabel_Data. KHÔNG gọi từ Preview ZPL,
+    // chỉ gọi từ luồng in thật, để Preview không làm hao hụt số lượng Work Order. ────────────
+
+    [HttpPost("/api/sakura/cartonsn/report-print-result")]
+    public async Task<IActionResult> CartonReportPrintResult([FromBody] CartonReportPrintResultRequest req)
+    {
+        if (req == null || string.IsNullOrWhiteSpace(req.CartonNumber))
+            return BadRequest(new { ok = false, error = "Thiếu dữ liệu.", errorCode = "common.missingData" });
+
+        try
+        {
+            await _snLabel.RecordCartonScanAsync(
+                req.WorkOrder?.Trim() ?? "",
+                req.CartonNumber.Trim(),
+                req.Color ?? "",
+                req.Condition ?? "",
+                req.SerialNumbers ?? new List<string>());
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, BuildError(ex));
+        }
+
+        return Ok(new { ok = true });
     }
 
     // ── API: ZPL template CRUD (edit template content without touching code) ──

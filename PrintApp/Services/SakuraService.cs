@@ -22,6 +22,11 @@ public class SakuraService
     public const int ManualMaxQuantity = 500;
     public const int WorkOrderMaxQuantity = 5000;
 
+    // Số sản phẩm/carton theo nghiệp vụ (khác với ZplTemplates.CartonSnPlaceholderCount — số ô
+    // SN vật lý trên tem — dù hiện tại 2 số này trùng nhau = 10). Dùng để tính carton hiện tại
+    // là đủ hộp (đúng bằng số này) hay lẻ hộp (phần dư còn lại của Work Order < số này).
+    public const int CartonPcsPerCarton = 10;
+
     private const string Base34Alphabet = "0123456789ABCDEFGHJKLMNPQRSTUVWXYZ"; // không có O, I
     private const int Base34 = 34;
     public const int MaxRunningNumberInt = Base34 * Base34 * Base34 - 1; // "ZZZ" = 39303
@@ -294,6 +299,73 @@ public class SakuraService
             .CountAsync(x => x.WorkOrder == workOrder && (x.Status == null || x.Status == "PASS"));
     }
 
+    // ── Carton SN Label — Work Order tracking (SM_Sakura_CartonLabel_Data) ──────────
+
+    // Tổng số serial đã in thành công cho Work Order này (cộng dồn qua mọi carton) — dùng để
+    // tính remaining + carton hiện tại đủ hộp hay lẻ hộp (xem CartonWorkOrderLookupResponse).
+    // 1 dòng = 1 carton (không phải 1 dòng/serial nữa) nên phải SUM CountSerial, không đếm dòng.
+    public async Task<int> GetCartonWorkOrderPrintedCountAsync(string workOrder)
+    {
+        return await _context.CartonSnScanLogs
+            .AsNoTracking()
+            .Where(x => x.WorkOrder == workOrder)
+            .SumAsync(x => (int?)x.CountSerial) ?? 0;
+    }
+
+    // Serial giờ lưu dạng CSV nhiều serial/carton trong 1 dòng (VD "SN1,SN2,SN3") — so khớp theo
+    // TOKEN đầy đủ (không phải substring) bằng cách bọc dấu phẩy 2 đầu cả cột lẫn giá trị cần
+    // tìm, để "RM15A...01" không bị match nhầm bởi "RM15A...010".
+    public async Task<bool> IsCartonSerialAlreadyUsedAsync(string serial)
+    {
+        string needle = "," + serial + ",";
+        return await _context.CartonSnScanLogs
+            .AsNoTracking()
+            .AnyAsync(x => ("," + x.Serial + ",").Contains(needle));
+    }
+
+    // Carton Number không được trùng — mỗi carton (thùng) là 1 định danh vật lý riêng, đã in
+    // rồi thì không cho nhập lại. Check toàn bộ bảng (không giới hạn theo Work Order).
+    public async Task<bool> IsCartonNumberAlreadyUsedAsync(string cartonNumber)
+    {
+        return await _context.CartonSnScanLogs.AsNoTracking().AnyAsync(x => x.CartonNumber == cartonNumber);
+    }
+
+    // 3 điều kiện check khi quét 1 SN vào carton: (1) định dạng — dùng lại TryParseSerialParts
+    // (cùng logic serial RM15A đang dùng ở SnLabel), (2) trùng trong lần quét hiện tại — client tự
+    // check bằng string/array, không cần tới server, (3) đã được quét/in ở carton khác chưa —
+    // check tại đây (đã in thành công không thể chọn lại, kể cả khác Work Order).
+    public async Task<(bool Ok, string? ErrorCode, string? ErrorMessage)> ValidateCartonSerialAsync(string serial)
+    {
+        if (!TryParseSerialParts(serial, out _, out _, out _, out _))
+            return (false, "cartonLabel.invalidSerialFormat", $"Serial '{serial}' không đúng định dạng.");
+
+        if (await IsCartonSerialAlreadyUsedAsync(serial))
+            return (false, "cartonLabel.serialAlreadyUsed", $"Serial '{serial}' đã được quét/in trước đó.");
+
+        return (true, null, null);
+    }
+
+    // Gọi SAU KHI ZPL coi như đã "in xong" (bridge thành công, hoặc Preview theo yêu cầu test
+    // hiện tại) — lưu 1 DÒNG DUY NHẤT cho cả carton: Serial là toàn bộ serial không rỗng nối
+    // bằng dấu phẩy, CountSerial là số lượng serial trong chuỗi đó (10, hoặc phần dư nếu lẻ hộp).
+    public async Task RecordCartonScanAsync(string workOrder, string cartonNumber, string color, string condition, IReadOnlyList<string> orderedSlots)
+    {
+        var nonEmpty = orderedSlots.Select(s => (s ?? "").Trim()).Where(s => s.Length > 0).ToList();
+        if (nonEmpty.Count == 0) return;
+
+        _context.CartonSnScanLogs.Add(new CartonSnScanLog
+        {
+            Serial = string.Join(",", nonEmpty),
+            ScanDate = VietnamNow(),
+            CountSerial = nonEmpty.Count,
+            WorkOrder = workOrder,
+            CartonNumber = cartonNumber,
+            Color = color,
+            Condition = condition
+        });
+        await _context.SaveChangesAsync();
+    }
+
     // Ngày sản xuất của lần in đầu tiên cho Work Order này (null nếu chưa in lần nào).
     // Dùng để hiển thị/khóa ô ngày trên form khi lookup lại 1 WO đã in dở.
     public async Task<DateTime?> GetWorkOrderProductionDateAsync(string workOrder)
@@ -536,12 +608,17 @@ public class SakuraService
         string.Concat(serials.Select(s => templateContent.Replace("{serialNumber}", s)));
 
     // Carton SN Label — 1 label chứa nhiều placeholder khác nhau (khác với SnLabel chỉ có
-    // {serialNumber}) nên cần build riêng: tra màu → SKU/PV ID + mô tả, ghép {snSlots} từ
-    // CartonSnSlots theo đúng thứ tự SN được quét.
+    // {serialNumber}): tra màu → SKU/PV ID + mô tả, rồi thay từng {sn1}..{sn10} theo ĐÚNG VỊ
+    // TRÍ ô SN tương ứng trên form. Tọa độ/cỡ chữ/barcode của từng ô đã có sẵn trong template
+    // (DB) — code không tự tính toạ độ nữa, chỉ truyền giá trị vào đúng placeholder.
     public async Task<string> BuildCartonLabelZplAsync(string cartonNumber, string color, string condition, IReadOnlyList<string> serialNumbers)
     {
         if (string.IsNullOrWhiteSpace(cartonNumber))
             throw new SakuraValidationException("cartonLabel.cartonNumberMissing", "Thiếu Carton Number.");
+
+        string trimmedCartonNumber = cartonNumber.Trim();
+        if (await IsCartonNumberAlreadyUsedAsync(trimmedCartonNumber))
+            throw new SakuraConflictException("cartonLabel.cartonNumberAlreadyUsed", $"Carton Number '{trimmedCartonNumber}' đã được sử dụng trước đó.", new { cartonNumber = trimmedCartonNumber });
 
         if (color == null || !ZplTemplates.CartonColorMeta.TryGetValue(color, out var meta))
             throw new SakuraValidationException("cartonLabel.unknownColor", $"Không nhận diện được màu '{color}'.", new { color });
@@ -549,35 +626,70 @@ public class SakuraService
         if (condition != "New" && condition != "Refurb")
             throw new SakuraValidationException("cartonLabel.invalidCondition", $"Condition '{condition}' không hợp lệ (chỉ New hoặc Refurb).", new { condition });
 
-        var serials = (serialNumbers ?? Array.Empty<string>())
-            .Where(s => !string.IsNullOrWhiteSpace(s))
-            .Select(s => s.Trim())
+        // QUAN TRỌNG: giữ nguyên vị trí — slots[i] LUÔN ứng với ô SN(i+1) trên form, kể cả khi
+        // ô đó đang bỏ trống (chuỗi rỗng). KHÔNG được lọc bỏ ô trống rồi dồn mảng lại, nếu
+        // không serial ở ô sau sẽ bị dồn lên nhầm vị trí {snN} (vd ô SN3 bị in nhầm vào {sn2}
+        // nếu SN2 đang trống mà mảng bị lọc/dồn trước khi tới đây).
+        var slots = (serialNumbers ?? Array.Empty<string>())
+            .Select(s => (s ?? "").Trim())
             .ToList();
 
-        if (serials.Count == 0 || serials.Count > ZplTemplates.CartonSnSlots.Count)
-            throw new SakuraValidationException("cartonLabel.invalidQuantity", $"Số lượng serial phải từ 1 đến {ZplTemplates.CartonSnSlots.Count}.", new { max = ZplTemplates.CartonSnSlots.Count });
+        if (slots.Count > ZplTemplates.CartonSnPlaceholderCount)
+            throw new SakuraValidationException("cartonLabel.invalidQuantity", $"Số lượng serial phải từ 1 đến {ZplTemplates.CartonSnPlaceholderCount}.", new { max = ZplTemplates.CartonSnPlaceholderCount });
 
-        if (serials.Distinct(StringComparer.OrdinalIgnoreCase).Count() != serials.Count)
+        var nonEmptySerials = slots.Where(s => s.Length > 0).ToList();
+        if (nonEmptySerials.Count == 0)
+            throw new SakuraValidationException("cartonLabel.invalidQuantity", $"Số lượng serial phải từ 1 đến {ZplTemplates.CartonSnPlaceholderCount}.", new { max = ZplTemplates.CartonSnPlaceholderCount });
+
+        if (nonEmptySerials.Distinct(StringComparer.OrdinalIgnoreCase).Count() != nonEmptySerials.Count)
             throw new SakuraValidationException("cartonLabel.duplicateSerial", "Danh sách serial có giá trị trùng lặp.");
+
+        // Re-check định dạng + đã quét/in trước đó chưa NGAY TẠI ĐÂY (không tin riêng client đã
+        // check qua verify-serial lúc quét từng ô) — áp dụng cho cả Preview lẫn Print thật vì cả
+        // 2 đều đi qua đúng hàm build này.
+        foreach (string s in nonEmptySerials)
+        {
+            if (!TryParseSerialParts(s, out _, out _, out _, out _))
+                throw new SakuraValidationException("cartonLabel.invalidSerialFormat", $"Serial '{s}' không đúng định dạng.", new { serial = s });
+        }
+
+        // Serial giờ lưu dạng CSV nhiều serial/carton trong 1 dòng nên không thể query 1 phát
+        // bằng Contains(nonEmptySerials) như trước — check từng serial một qua LIKE (xem
+        // IsCartonSerialAlreadyUsedAsync). Danh sách tối đa 10 serial/carton nên chấp nhận được.
+        var alreadyUsed = new List<string>();
+        foreach (string s in nonEmptySerials)
+        {
+            if (await IsCartonSerialAlreadyUsedAsync(s))
+                alreadyUsed.Add(s);
+        }
+        if (alreadyUsed.Count > 0)
+        {
+            // Dùng chung param "serial" (không phải "serials") với ValidateCartonSerialAsync để
+            // front-end chỉ cần 1 bản dịch "error.cartonLabel.serialAlreadyUsed" duy nhất cho cả
+            // 2 nơi ném lỗi này (verify-serial từng ô lẫn re-check lúc build ZPL).
+            string joined = string.Join(", ", alreadyUsed);
+            throw new SakuraConflictException("cartonLabel.serialAlreadyUsed", $"Serial đã được quét/in trước đó: {joined}.", new { serial = joined });
+        }
 
         string template = await GetZplTemplateAsync("CartonLabel");
 
-        var snSlots = new StringBuilder();
-        for (int i = 0; i < serials.Count; i++)
-        {
-            var (x, y) = ZplTemplates.CartonSnSlots[i];
-            if (snSlots.Length > 0) snSlots.Append('\n');
-            snSlots.Append(ZplTemplates.BuildCartonSnSlotZpl(x, y, serials[i]));
-        }
-
-        return template
-            .Replace("{cartonNumber}", cartonNumber.Trim())
+        string zpl = template
+            .Replace("{cartonNumber}", trimmedCartonNumber)
             .Replace("{skuPvId}", meta.SkuPvId)
             .Replace("{description}", meta.Description)
-            .Replace("{quantity}", serials.Count.ToString())
+            .Replace("{quantity}", nonEmptySerials.Count.ToString())
             .Replace("{condition}", condition)
-            .Replace("{pdf417Data}", string.Join(",", serials))
-            .Replace("{snSlots}", snSlots.ToString());
+            .Replace("{pdf417Data}", string.Join(",", nonEmptySerials));
+
+        // Ô nào không có serial thì thay bằng chuỗi rỗng — field text/barcode tương ứng vẫn
+        // còn trên tem nhưng không in ra gì (^FD^FS rỗng hợp lệ).
+        for (int i = 0; i < ZplTemplates.CartonSnPlaceholderCount; i++)
+        {
+            string value = i < slots.Count ? slots[i] : "";
+            zpl = zpl.Replace($"{{sn{i + 1}}}", value);
+        }
+
+        return zpl;
     }
 
     // ── Direct TCP send (raw port 9100) ──────────────────────────────────────
